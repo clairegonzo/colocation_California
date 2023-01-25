@@ -1,0 +1,137 @@
+---
+title: "Object Mapping"
+author: 'By: Claire Gonzales'
+date: "2023-01-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Instructions to access sf object mapping from Chris' GitHub: https://github.com/cfree14/wcfish
+
+```{r}
+# Run if you don't already have devtools installed
+# install.packages("devtools")
+
+# Run once devtools is successfully installed
+devtools::install_github("cfree14/wcfish", force=T)
+library(wcfish)
+library(tidyverse)
+library(here)
+library(sf)
+library(tmap)
+library(viridisLite)
+library(viridis)
+# library(paletter)
+```
+
+Getting the blocks shapefile from Chris' Github:
+```{r}
+# See dataset metadata by typing a question mark and the dataset name
+ # ?wcfish::blocks
+
+# Store the dataset in an object of your own choosing as follows:
+blocks_sf <- wcfish::blocks %>%
+  drop_na(block_lat_dd, block_long_dd) 
+# %>%
+#   st_as_sf(coords = c("block_long_dd", "block_lat_dd")) #take lat and long and convert to spatial points
+
+################################################################################
+# FOR ACTUAL MAPPING
+# Use the ESRI .shp file from: https://chrismfree.com/california-fisheries-data/ca-fishing-blocks/
+
+blocks_shp <- read_sf(here("data_fromChris", "CA_OR_WA_comm_fishing_blocks", "CA_OR_WA_comm_fishing_blocks.shp"))
+
+```
+
+
+
+Read in catch data from Chris
+```{r}
+catchdata <- read_csv(here("data_fromChris", "gonzalez_data.csv"))
+```
+
+
+Now that we have both the catch data from Chris and the blocks shapefile, I am going to run these through a spatial function
+
+```{r}
+# looking at blocks spatially
+ggplot(data = blocks_sf, aes(x = block_long_dd, y = block_lat_dd)) +
+  geom_point(shape = 15, fill = NA, aes(size = block_sqkm)) +
+  theme_minimal()
+
+```
+
+Making the catch data ready for spatial mapping
+
+```{r}
+
+catchdata_sf_merge <- merge(blocks_sf, catchdata) %>% 
+  filter(block_state == "California",
+         block_type %in% c("Inshore", "Midshore")) %>% 
+  mutate() %>% 
+  select(block_id, block_type, block_sqkm, block_long_dd, block_lat_dd, nvessels:geometry) %>% 
+  drop_na(block_long_dd, block_lat_dd) %>% 
+  st_as_sf(coords = c("block_long_dd", "block_lat_dd")) #take lat and long and convert to spatial points
+
+```
+
+
+```{r}
+# we need to tell r what the coord reference system is using `st_crs`
+
+st_crs(catchdata_sf_merge) <- 4326
+```
+
+Add blocks shapefile to map
+
+```{r}
+# 
+# blocks_shp_transform <- st_transform(blocks_shp, 4326)
+# 
+# ggplot(data = blocks_shp_transform) +
+#   geom_sf()+
+#   theme_minimal()
+```
+
+Combine catchdata and block shapfile map
+```{r}
+# map <- ggplot() +
+#   geom_sf(data = blocks_shp_transform) +
+#   geom_sf(data = catchdata_sf_merge, na.rm = TRUE,
+#           aes(color = landings_lb, size = block_sqkm)) +
+#   theme_void()
+```
+
+
+#trying this a different way
+
+```{r}
+catchdata_sf_merge_transform <- st_transform(catchdata_sf_merge, 4326)
+
+#map of landings
+ggplot(data = catchdata_sf_merge_transform) +
+  geom_sf(aes(fill = landings_lb)) +
+  guides(color = guide_legend(reverse = TRUE)) +
+  theme_minimal()
+
+#map of value
+ggplot(data = catchdata_sf_merge_transform) +
+  geom_sf(aes(fill = value_usd))+
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(data = catchdata_sf_merge_transform, aes(y = landings_lb)) +
+  geom_histogram()
+```
+
+
+Write the catch data as a csv so that we can upload to ArcPro
+```{r}
+write.csv(catchdata_sf_merge_transform, here("data", "catchdata_output.csv"), row.names = TRUE)
+```
+
