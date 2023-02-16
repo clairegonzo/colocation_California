@@ -7,6 +7,8 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(plotly)
 ```
 
 Instructions to access sf object mapping from Chris' GitHub: https://github.com/cfree14/wcfish
@@ -16,14 +18,12 @@ Instructions to access sf object mapping from Chris' GitHub: https://github.com/
 # install.packages("devtools")
 
 # Run once devtools is successfully installed
-devtools::install_github("cfree14/wcfish", force=T)
-library(wcfish)
+# devtools::install_github("cfree14/wcfish", force=T)
+# library(wcfish)
 library(tidyverse)
 library(here)
 library(sf)
-library(tmap)
-library(viridisLite)
-library(viridis)
+#library(tmap)
 # library(paletter)
 ```
 
@@ -78,11 +78,89 @@ catchdata_sf_merge <- merge(blocks_sf, catchdata) %>%
 
 ```
 
+Coming back later to add a column of the z transformed data in R. This seems easier to do here than in ArcPro.
+```{r}
+
+a <- min(catchdata_sf_merge$landings_lb, na.rm = TRUE)
+b <- max(catchdata_sf_merge$landings_lb, na.rm = TRUE) + 1
+m <- (a + b)/2
+# median(catchdata_sf_merge$landings_lb, na.rm = TRUE)
+
+catchdata_sf_merge_z <- catchdata_sf_merge %>% 
+  mutate(z_lndngs_ = case_when(
+    landings_lb <= a ~ 1,
+    (landings_lb > a & landings_lb <= m) ~ (1-(2*(((landings_lb-a)/(b-a))**2))),
+    (landings_lb > m & landings_lb < b) ~ (2*(((landings_lb - b)/(b-a))**2)),
+    landings_lb >= b ~ 0,
+    TRUE ~ as.numeric(NA)
+  ))
+
+# trying to normalize the data by taking the natural log
+catchdata_sf_log <- catchdata_sf_merge %>% 
+  mutate(ln_landngs = log(landings_lb))
+# WORKED. But also now everything is negative soooo let's see how that looks
+```
+
+Trying a linear transformation of the data
+```{r}
+slope <- (1/-(b-a))
+slope2 <- (1/-b)
+y_int <- 1
+
+catchdata_sf_merge_linear <- catchdata_sf_merge %>% 
+  mutate(linear_landings = (landings_lb*slope2)+1)
+
+## See bottom chunk for plots and plotly of this transformed data
+
+```
+
+Option 4 - log transformation of data and then Z transformation
+```{r}
+a_ln <- min(catchdata_sf_log$ln_landngs, na.rm = TRUE)
+b_ln <- max(catchdata_sf_log$ln_landngs, na.rm = TRUE) + 1
+m_ln <- (a_ln + b_ln)/2
+
+catchdata_sf_merge_ln_z <- catchdata_sf_log %>% 
+  mutate(z_lndngs_ln = case_when(
+    ln_landngs <= a_ln ~ 1,
+    (ln_landngs > a_ln & ln_landngs <= m_ln) ~ (1-(2*(((ln_landngs-a_ln)/(b_ln-a_ln))**2))),
+    (ln_landngs > m_ln & ln_landngs < b_ln) ~ (2*(((ln_landngs - b_ln)/(b_ln-a_ln))**2)),
+    ln_landngs >= b_ln ~ 0,
+    TRUE ~ as.numeric(NA)
+  ))
+
+```
+
+
+Let's take a look at the transformed data
+```{r}
+#scatter plot of ln and z transformed data, against original catch data
+ggplot(data = catchdata_sf_log, aes(x = landings_lb, y = ln_landngs)) +
+  geom_point() +
+  theme_minimal()
+
+# histogram of original catch data
+ggplot(data = catchdata_sf_log, aes(x = landings_lb)) +
+  geom_histogram() +
+  theme_minimal() +
+  xlim(0, 2500000)
+
+# histogram of ln and z transformed data
+ggplot(data = catchdata_sf_log, aes(x = ln_landngs)) +
+  geom_histogram() +
+  theme_minimal()
+```
+
 
 ```{r}
 # we need to tell r what the coord reference system is using `st_crs`
 
-st_crs(catchdata_sf_merge) <- 4326
+#st_crs(catchdata_sf_merge) <- 4326
+
+#UPDATE
+# Doing this with the transformed data instead
+
+st_crs(catchdata_sf_merge_ln_z) <- 4326
 ```
 
 Add blocks shapefile to map
@@ -109,29 +187,82 @@ Combine catchdata and block shapfile map
 #trying this a different way
 
 ```{r}
-catchdata_sf_merge_transform <- st_transform(catchdata_sf_merge, 4326)
+catchdata_sf_lnz_transform <- st_transform(catchdata_sf_merge_ln_z, 4326)
 
 #map of landings
-ggplot(data = catchdata_sf_merge_transform) +
+ggplot(data = catchdata_sf_lnz_transform) +
   geom_sf(aes(fill = landings_lb)) +
   guides(color = guide_legend(reverse = TRUE)) +
   theme_minimal()
 
 #map of value
-ggplot(data = catchdata_sf_merge_transform) +
-  geom_sf(aes(fill = value_usd))+
+# ggplot(data = catchdata_sf_merge_transform) +
+#   geom_sf(aes(fill = value_usd))+
+#   theme_minimal()
+
+```
+
+```{r}
+# looking at data
+
+ggplot(data = catchdata_sf_lnz_transform, aes(x = z_lndngs_ln)) +
+  geom_histogram()
+
+# Looks like the data is strongly skewed left, which is why the legend is so not useful
+```
+
+
+Write the catch data as a shapefile so that we can upload to ArcPro
+```{r}
+st_write(catchdata_sf_lnz_transform, here("data", "catchdata_output", "catchdata_output_updated.shp"), append = FALSE)
+```
+
+## Visualizations
+
+OPTIONS: Data that is transformed to Z-shaped membership function OR Linear transformation
+```{r}
+plotz <- ggplot(data = catchdata_sf_merge_z, aes(x = landings_lb, y = z_lndngs_)) +
+  geom_point() +
   theme_minimal()
 
+plotz_plotly <- ggplotly(plotz)
+
+plotz_plotly
+```
+
+
+```{r}
+#scatter plot of ln and z transformed data, against original catch data
+plot1 <- ggplot(data = catchdata_sf_log, aes(x = landings_lb, y = ln_landngs)) +
+  geom_point() +
+  theme_minimal()
+
+plot1_plotly <- ggplotly(plot1)
+
+plot1_plotly
+
 ```
 
 ```{r}
-ggplot(data = catchdata_sf_merge_transform, aes(y = landings_lb)) +
-  geom_histogram()
+plot2 <- ggplot(data = catchdata_sf_merge_linear, aes(x = landings_lb, y = linear_landings)) +
+  geom_point() +
+  theme_minimal()
+
+plot2_plotly <- ggplotly(plot2)
+
+plot2_plotly
+
 ```
 
 
-Write the catch data as a csv so that we can upload to ArcPro
 ```{r}
-write.csv(catchdata_sf_merge_transform, here("data", "catchdata_output.csv"), row.names = TRUE)
+plot4 <- ggplot(data = catchdata_sf_merge_ln_z, aes(x = ln_landngs, y = z_lndngs_ln)) +
+  geom_point() +
+  theme_minimal()
+
+plot4_plotly <- ggplotly(plot4)
+
+plot4_plotly
+
 ```
 
