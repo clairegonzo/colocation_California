@@ -1,0 +1,119 @@
+---
+title: "notes_suitabilityeqn"
+author: 'By: Claire Gonzales'
+date: "2023-02-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+library(here)
+library(tidyverse)
+```
+
+Sensitivity testing for co-location suitability 
+```{r}
+#setting vectors
+wind_var <- c(seq(0,1,length.out = 100), rep(NA, times = 20))
+wave_var <- c(seq(0,1,length.out = 100), rep(NA, times = 20))
+aqua_var <- c(seq(0,1,length.out = 100), rep(NA, times = 20))
+fish_var <- c(seq(-1,0,length.out = 100), rep(NA, times = 20))
+# n_var <- seq(1,5000, length.out = 5000)
+
+#randomly sampling from each vector
+set.seed(1)
+wind_sample <- sample(wind_var, 5000, replace = TRUE)
+wave_sample <- sample(wave_var, 5000, replace = TRUE)
+aqua_sample <- sample(aqua_var, 5000, replace = TRUE)
+fish_sample <- sample(fish_var, 5000, replace = TRUE)
+
+co_lo_df <- tibble(wind_sample, wave_sample, aqua_sample, fish_sample)
+
+co_lo_suit <- co_lo_df %>% 
+  mutate(n_values = as.factor(rowSums(!is.na(co_lo_df)))) %>% 
+  rowwise %>% 
+  mutate(mean = mean(c(wind_sample, wave_sample, aqua_sample, fish_sample), na.rm = TRUE))
+  
+
+
+```
+
+
+Plot the means
+```{r}
+#scatter plot
+ggplot(co_lo_suit, aes(x = fish_sample, y = mean)) +
+  geom_point(aes(color = n_values)) +
+  theme_minimal() +
+  ylab("co-location sustainability index")
+
+#histogram
+ggplot(co_lo_suit, aes(x = mean)) +
+  geom_histogram() +
+  theme_minimal() +
+  ylab("co-location sustainability index")
+
+#boxplot
+ggplot(co_lo_suit, aes(x = n_values, y = mean)) +
+  geom_boxplot(aes(fill = n_values)) +
+  #geom_jitter() +
+  theme_minimal() +
+  ylab("co-location sustainability index")
+```
+
+Range of scatter
+```{r}
+max(co_lo_suit$mean, na.rm = TRUE)
+
+min(co_lo_suit$mean, na.rm = TRUE)
+```
+
+Same thing, but adjust fishing value to see if that changes anything
+
+```{r}
+fish_var2 <- c(seq(0,1,length.out = 100), rep(NA, times = 20))
+# n_var <- seq(1,5000, length.out = 5000)
+
+#randomly sampling from each vector
+set.seed(1)
+fish_sample2 <- sample(fish_var2, 5000, replace = TRUE)
+
+co_lo_df <- tibble(wind_sample, wave_sample, aqua_sample, fish_sample2)
+
+co_lo_suit <- co_lo_df %>% 
+  mutate(n_values = as.factor(rowSums(!is.na(co_lo_df)))) %>% 
+  rowwise %>% 
+  mutate(mean = mean(c(wind_sample, wave_sample, aqua_sample, fish_sample2), na.rm = TRUE))
+```
+
+
+Plot the means
+```{r}
+#scatter plot
+ggplot(co_lo_suit, aes(x = fish_sample2, y = mean)) +
+  geom_point(aes(color = n_values)) +
+  theme_minimal() +
+  ylab("co-location sustainability index")
+
+#histogram
+ggplot(co_lo_suit, aes(x = mean)) +
+  geom_histogram() +
+  theme_minimal() +
+  ylab("co-location sustainability index")
+
+#boxplot
+ggplot(co_lo_suit, aes(x = n_values, y = mean)) +
+  geom_boxplot(aes(fill = n_values)) +
+  #geom_jitter() +
+  theme_minimal() +
+  ylab("co-location sustainability index")
+
+```
+
+Range of scatter
+```{r}
+max(co_lo_suit$mean, na.rm = TRUE)
+
+min(co_lo_suit$mean, na.rm = TRUE)
+```
