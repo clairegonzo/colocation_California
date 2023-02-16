@@ -32,12 +32,18 @@ blocks_shp <- read_sf(here("data_fromChris", "CA_OR_WA_comm_fishing_blocks", "CA
 ```{r}
 mydata <- read.csv(here("data", "jupyter_data_2005_10_combo.csv"))
 
-metadata <- read.csv(here("data", "jupyter_metadata.csv"))
+metadata <- read.csv(here("data", "jupyter_metadata.csv")) %>% 
+  mutate(block_lat_dd = latitude,
+         block_long_dd = longitude)
+
 ```
 
 ## Merge datasets together 
 
 ```{r}
+
+initial_merge <- merge(blocks_sf, mydata, by = c("block_long_dd", "block_lat_dd"))
+
 data_merged <- merge(metadata, mydata) %>% 
   filter(year == '5yrave') %>% 
   st_as_sf(coords = c("latitude", "longitude")) #take lat and long and convert to spatial points
@@ -45,5 +51,22 @@ data_merged <- merge(metadata, mydata) %>%
 
 ```{r}
 st_crs(data_merged) <- 4326
+
+data_transform <- st_transform(data_merged, 4326)
+```
+
+## Visualize data sets
+```{r}
+ggplot(data = data_transform) +
+  geom_sf(aes(fill = watts)) +
+  # guides(color = guide_legend(reverse = TRUE)) +
+  theme_minimal()
+
+### I think this isn't working because they aren't correctly spatialized ###
+```
+
+## export csv of data
+```{r}
+write.csv(data_transform, here("data", "wave_output", "wave_data_output.csv"))
 ```
 
