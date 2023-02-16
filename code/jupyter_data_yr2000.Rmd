@@ -1,0 +1,49 @@
+---
+title: "wave energy"
+author: 'By: Claire Gonzales'
+date: "2023-02-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+library(sf)
+```
+
+This is to merge the wave energy data points with block coordinates and spatialize everything
+
+## Reading in data
+
+```{r}
+# Store the dataset in an object of your own choosing as follows:
+blocks_sf <- wcfish::blocks %>%
+  drop_na(block_lat_dd, block_long_dd) 
+
+################################################################################
+# FOR ACTUAL MAPPING
+# Use the ESRI .shp file from: https://chrismfree.com/california-fisheries-data/ca-fishing-blocks/
+
+blocks_shp <- read_sf(here("data_fromChris", "CA_OR_WA_comm_fishing_blocks", "CA_OR_WA_comm_fishing_blocks.shp"))
+```
+
+```{r}
+mydata <- read.csv(here("data", "jupyter_data_2005_10_combo.csv"))
+
+metadata <- read.csv(here("data", "jupyter_metadata.csv"))
+```
+
+## Merge datasets together 
+
+```{r}
+data_merged <- merge(metadata, mydata) %>% 
+  filter(year == '5yrave') %>% 
+  st_as_sf(coords = c("latitude", "longitude")) #take lat and long and convert to spatial points
+```
+
+```{r}
+st_crs(data_merged) <- 4326
+```
+
