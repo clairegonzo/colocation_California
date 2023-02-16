@@ -1,0 +1,62 @@
+---
+title: "NREL API pull"
+author: 'By: Claire Gonzales'
+date: "2023-01-30"
+output: html_document
+---
+
+Trying to pull west coast wave model data from the NREL API: https://developer.nrel.gov/docs/solar/nsrdb/guide/
+
+Using instructions from Data Quest to help figure this out: https://www.dataquest.io/blog/r-api-tutorial/
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+# install.packages(c("httr", "jsonlite"))
+
+# library(httr)
+# library(jsonlite)
+# 
+```
+# 
+# We will be asking for data from the NREL API, which is a GET request. This uses the 'GET()' function from the httr library.
+# 
+```{r}
+# res = GET("https://developer.nrel.gov/api/hsds/nrel/US_wave/West_Coast/West_Coast_wave_2010.h5?api_key=tliP05kYoEI9wtYovfugZ7O9zavyIKfkJoRoy2zF")
+# 
+# # view res
+# res
+# 
+```
+
+## Jupyter Notebook
+Looking for a way to tell Jupyter notebook which sites I want data from. Going to create a csv file that has the lat and longs of the sites that I want and then turn it into a text file and try uploading that to Jupyter
+
+```{r}
+## Need to run the first few chunks of "catchdata_transformation.rmd" to get to this point
+
+catch_sites_jupyter <- merge(blocks_sf, catchdata) %>% 
+  filter(block_state == "California",
+         block_type %in% c("Inshore", "Midshore")) %>% 
+  mutate() %>% 
+  select(block_id, block_long_dd, block_lat_dd) %>% 
+  drop_na(block_long_dd, block_lat_dd) %>% 
+  st_set_geometry(NULL)
+```
+
+```{r}
+# commented out so that this doesn't write every time
+write.csv(catch_sites_jupyter, here("catch_sites_jupyter.csv"), row.names = FALSE)
+```
+
+```{r}
+mydata <- read.csv(here("catch_sites_jupyter.csv"))
+```
+
+```{r}
+test <- paste(mydata$together, collapse = ",")
+
+test <- paste0("(",test, ")")
+```
+
