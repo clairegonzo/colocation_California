@@ -15,6 +15,11 @@ library(sf)
 
 This is to merge the wave energy data points with block coordinates and spatialize everything
 
+```{r}
+claire_excel <- read.csv(here("randompoints_10000_TableToExcel.csv"))
+```
+
+
 ## Reading in data
 
 ```{r}
@@ -68,5 +73,60 @@ ggplot(data = data_transform) +
 ## export csv of data
 ```{r}
 write.csv(data_transform, here("data", "wave_output", "wave_data_output.csv"))
+```
+
+# csvs of random points
+
+Massive csvs from NREL need to be reformatted. Csvs have ~2500 coordinate sites as rows and time is a row
+
+```{r}
+data_a10 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_yr2010_a.csv"))
+data_a89 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_yr2008_09_a.csv"))
+data_b <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_b.csv"))
+data_c10 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_2010_c.csv"))
+data_c89 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_2008_09_c.csv"))
+data_d10 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_2010_d.csv"))
+data_d89 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_2008_09_d.csv"))
+
+```
+
+```{r}
+# trying to pivot the data
+
+data_a10_piv <- data_a10 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_a89_piv <- data_a89 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_b_piv <- data_b %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_c10_piv <- data_c10 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_c89_piv <- data_c89 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_d10_piv <- data_d10 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_d89_piv <- data_d89 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
 ```
 
