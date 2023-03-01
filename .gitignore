@@ -3,3 +3,7 @@
 .RData
 .Ruserdata
 .DS_Store
+
+
+# Ignore the wave output data (too large)
+data/wave_output/randompoints_watts
