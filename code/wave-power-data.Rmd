@@ -173,3 +173,13 @@ merged_c <- merge(points_c, all_c_mean, by = "site")
 merged_d <- merge(points_d, all_d_mean, by = "site")
 ```
 
+Last step: rbinding a, b, c and d dataframes together
+```{r}
+wave_all_watts <- rbind(merged_a, merged_b, merged_c, merged_d) %>% 
+  select(longitude, latitude, mean_watts)
+```
+
+```{r}
+write.csv(wave_all_watts, here("data", "wave_output", "wave_data_output_V2.csv"))
+```
+
