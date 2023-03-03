@@ -10,3 +10,6 @@ data/wave_output/randompoints_watts
 
 #Ignore wave data input coordinates (too large/clunky)
 random_points/forR
+
+# Ignore exported csvs (too large) These are being put on chap 2 google drive
+data/wave_output
