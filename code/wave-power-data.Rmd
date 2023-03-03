@@ -139,18 +139,37 @@ Same with "b" documents, "c" documents and "d" documents.
 
 all_a_mean <- rbind(data_a10_piv, data_a89_piv) %>% 
   group_by(site) %>% 
-  mutate(mean_watts = mean(mean_watts, na.rm = TRUE))
+  summarize(mean_watts = mean(mean_watts, na.rm = TRUE))
 
 all_b_mean <- data_b_piv
 
 all_c_mean <- rbind(data_c10_piv, data_c89_piv) %>% 
   group_by(site) %>% 
-  mutate(mean_watts = mean(mean_watts, na.rm = TRUE))
+  summarize(mean_watts = mean(mean_watts, na.rm = TRUE))
   
 all_d_mean <- rbind(data_d10_piv, data_d89_piv) %>% 
   group_by(site) %>% 
-  mutate(mean_watts = mean(mean_watts, na.rm = TRUE))
+  summarize(mean_watts = mean(mean_watts, na.rm = TRUE))
 
 ```
 
-Now i need to 
+Now I need to merge the coordinates that I put into Jupyter with the wattages for those coordinates that I got out of Jupyter
+
+```{r}
+# First reading in the csv files
+
+points_a <- read.csv(here("random_points", "forR", "randompoints_10000_a.csv"))
+points_b <- read.csv(here("random_points", "forR", "randompoints_10000_b.csv"))
+points_c <- read.csv(here("random_points", "forR", "randompoints_10000_c.csv"))
+points_d <- read.csv(here("random_points", "forR", "randompoints_10000_d.csv"))
+```
+
+```{r}
+# merge files together
+
+merged_a <- merge(points_a, all_a_mean, by = "site")
+merged_b <- merge(points_b, all_b_mean, by = "site")
+merged_c <- merge(points_c, all_c_mean, by = "site")
+merged_d <- merge(points_d, all_d_mean, by = "site")
+```
+
