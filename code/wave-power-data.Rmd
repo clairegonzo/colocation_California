@@ -80,13 +80,14 @@ write.csv(data_transform, here("data", "wave_output", "wave_data_output.csv"))
 Massive csvs from NREL need to be reformatted. Csvs have ~2500 coordinate sites as rows and time is a row
 
 ```{r}
-data_a10 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_yr2010_a.csv"))
-data_a89 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_yr2008_09_a.csv"))
-data_b <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_b.csv"))
-data_c10 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_2010_c.csv"))
-data_c89 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_2008_09_c.csv"))
-data_d10 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_2010_d.csv"))
-data_d89 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_2008_09_d.csv"))
+data_a10 <- read.csv(here("data", "wave_output", "randompoints_watts_wgs", "jupyter_data_wgs_2010_a.csv"))
+data_a89 <- read.csv(here("data", "wave_output", "randompoints_watts_wgs", "jupyter_data_wgs_2008_09_a.csv"))
+data_b10 <- read.csv(here("data", "wave_output", "randompoints_watts_wgs", "jupyter_data_wgs_2010_b.csv"))
+data_b89 <- read.csv(here("data", "wave_output", "randompoints_watts_wgs", "jupyter_data_wgs_2008_09_b.csv"))
+data_c10 <- read.csv(here("data", "wave_output", "randompoints_watts_wgs", "jupyter_data_wgs_2010_c.csv"))
+data_c89 <- read.csv(here("data", "wave_output", "randompoints_watts_wgs", "jupyter_data_wgs_2008_09_c.csv"))
+data_d10 <- read.csv(here("data", "wave_output", "randompoints_watts_wgs", "jupyter_data_wgs_2010_d.csv"))
+data_d89 <- read.csv(here("data", "wave_output", "randompoints_watts_wgs", "jupyter_data_wgs_2008_09_d.csv"))
 
 ```
 
@@ -103,7 +104,12 @@ data_a89_piv <- data_a89 %>%
   group_by(site) %>% 
   summarize(mean_watts = mean(watts, na.rm = TRUE))
 
-data_b_piv <- data_b %>% 
+data_b10_piv <- data_b10 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_b89_piv <- data_b89 %>% 
   pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
   group_by(site) %>% 
   summarize(mean_watts = mean(watts, na.rm = TRUE))
@@ -141,7 +147,9 @@ all_a_mean <- rbind(data_a10_piv, data_a89_piv) %>%
   group_by(site) %>% 
   summarize(mean_watts = mean(mean_watts, na.rm = TRUE))
 
-all_b_mean <- data_b_piv
+all_b_mean <- rbind(data_b10_piv, data_b89_piv) %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(mean_watts, na.rm = TRUE))
 
 all_c_mean <- rbind(data_c10_piv, data_c89_piv) %>% 
   group_by(site) %>% 
@@ -158,10 +166,10 @@ Now I need to merge the coordinates that I put into Jupyter with the wattages fo
 ```{r}
 # First reading in the csv files
 
-points_a <- read.csv(here("random_points", "forR", "randompoints_10000_a.csv"))
-points_b <- read.csv(here("random_points", "forR", "randompoints_10000_b.csv"))
-points_c <- read.csv(here("random_points", "forR", "randompoints_10000_c.csv"))
-points_d <- read.csv(here("random_points", "forR", "randompoints_10000_d.csv"))
+points_a <- read.csv(here("random_points_wgs1984", "forR", "randompoints_wgs1984_a.csv"))
+points_b <- read.csv(here("random_points_wgs1984", "forR", "randompoints_wgs1984_b.csv"))
+points_c <- read.csv(here("random_points_wgs1984", "forR", "randompoints_wgs1984_c.csv"))
+points_d <- read.csv(here("random_points_wgs1984", "forR", "randompoints_wgs1984_d.csv"))
 ```
 
 ```{r}
@@ -176,10 +184,10 @@ merged_d <- merge(points_d, all_d_mean, by = "site")
 Last step: rbinding a, b, c and d dataframes together
 ```{r}
 wave_all_watts <- rbind(merged_a, merged_b, merged_c, merged_d) %>% 
-  select(longitude, latitude, mean_watts)
+  select(Long_wgs1984, Lat_wgs1984, mean_watts)
 ```
 
 ```{r}
-write.csv(wave_all_watts, here("data", "wave_output", "wave_data_output_V2.csv"))
+write.csv(wave_all_watts, here("data", "wave_output", "wave_data_output_WGS.csv"))
 ```
 
