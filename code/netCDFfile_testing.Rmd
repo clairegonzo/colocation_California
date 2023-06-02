@@ -1,0 +1,135 @@
+---
+title: "POC timeseries"
+author: 'By: Claire Gonzales'
+date: "2023-04-21"
+output: html_document
+---
+
+Can I use this 'ncdf4' package to open NC files in R and use them? Ultimately need to do this to create a timeseries of POC values
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+
+library(tidyverse)
+library(here)
+library(paletteer)
+library(ggplot2)
+library(ncdf4)
+```
+
+First need to reformat the csv to be able to put it into python and get POC/SST data
+
+```{r}
+#reading in csv, making it long form data and writing csv to export that new format of the data
+
+sites <- read_csv(here("data", "bivalve_model", "poc_data", "test3.csv")) %>% 
+  pivot_longer(cols = oct_14:march_16, names_to = "date", values_to = "poc" )
+
+#write_csv(sites, here("data", "bivalve_model","poc_data","test3_long.csv"))
+
+```
+############## RUNNING CSV THROUGH PYTHON TO GET GEO DATA ####################
+
+
+
+```{r}
+ncfile_1 <- nc_open( here("data", "bivalve_model","poc_data",  "AQUA_MODIS.20160301_20160331.L3m.MO.POC.poc.4km.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+
+attributes(ncfile_1$var)
+attributes(ncfile_1$dim)
+```
+
+```{r}
+lat <- ncvar_get(ncfile_1, "lat")
+nlat <- dim(lat)
+
+lon <- ncvar_get(ncfile_1, "lon")
+nlon <- dim(lon) 
+
+month <- march
+
+```
+
+#################### Wrangling NetCDF Files ####################
+
+# Mixed layer depth
+```{r}
+## looking at the data
+ncfile_mix <- nc_open( here("data", "bivalve_model","data_NetCDF", "ECCO_L4_MIXED_LAYER_DEPTH_05DEG_MONTHLY_V4R4",  "OCEAN_MIXED_LAYER_DEPTH_mon_mean_2014-09_ECCO_V4r4_latlon_0p50deg.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+
+attributes(ncfile_mix$var)
+attributes(ncfile_mix$dim)
+
+## lat and long names:
+## "latitude" and "longitude"
+```
+
+```{r}
+lat <- ncvar_get(ncfile_mix, "latitude")
+nlat <- dim(lat)
+
+lon <- ncvar_get(ncfile_mix, "longitude")
+nlon <- dim(lon) 
+
+```
+
+## Reading in files 
+```{r}
+mix_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/ECCO_L4_MIXED_LAYER_DEPTH_05DEG_MONTHLY_V4R4", pattern = "*.nc")
+```
+
+
+# Surface temperature
+```{r}
+ncfile_sst <- nc_open( here("data", "bivalve_model","data_NetCDF", "OceanColor_SST",  "AQUA_MODIS.20141001_20141031.L3m.MO.SST.sst.4km.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+
+attributes(ncfile_sst$var)
+attributes(ncfile_sst$dim)
+
+## lat and long names:
+## "lat" and "lon"
+```
+
+## Reading in files 
+```{r}
+sst_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_SST", pattern = "*.nc")
+```
+
+
+# Current veloicty
+```{r}
+ncfile_current <- nc_open( here("data", "bivalve_model","data_NetCDF", "OSCAR_L4_OC_FINAL_V2.0",  "oscar_currents_final_20141001.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+
+attributes(ncfile_current$var)
+attributes(ncfile_current$dim)
+
+## lat and long names:
+## "latitude" and "longitude"
+```
+
+## Reading in files 
+```{r}
+curvel_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OSCAR_L4_OC_FINAL_V2.0", pattern = "*.nc")
+```
+
+# POC
+```{r}
+ncfile_poc <- nc_open( here("data", "bivalve_model","data_NetCDF", "OceanColor_POC",  "AQUA_MODIS.20141001_20141031.L3m.MO.POC.poc.4km.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+
+attributes(ncfile_poc$var)
+attributes(ncfile_poc$dim)
+
+## lat and long names:
+## "lat" and "lon"
+```
+
+## Reading in files 
+```{r}
+poc_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_POC", pattern = "*.nc")
+```
+
