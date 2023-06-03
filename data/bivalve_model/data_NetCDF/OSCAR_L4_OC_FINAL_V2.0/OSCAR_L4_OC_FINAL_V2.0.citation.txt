@@ -1,0 +1,1 @@
+ESR; Dohan, Kathleen. 2022. Ocean Surface Current Analyses Real-time (OSCAR) Surface Currents - Final 0.25 Degree (Version 2.0). Ver. 2.0. PO.DAAC, CA, USA. Dataset accessed 2023-06-01 at https://doi.org/10.5067/OSCAR-25F20
