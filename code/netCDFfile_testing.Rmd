@@ -5,7 +5,7 @@ date: "2023-04-21"
 output: html_document
 ---
 
-Can I use this 'ncdf4' package to open NC files in R and use them? Ultimately need to do this to create a timeseries of POC values
+This rmd is to extract data from the NetCDF files and create a matrix with that information that can feed into the bivalve model. I want monthly averaged data with the sites on the y axis (as rows) and each of the 18 months on the x axis (as columns). I have data for 4 types of physical data. I am going to try and format them all the same way.
 
 
 ```{r setup, include=FALSE}
@@ -25,7 +25,7 @@ library(raster) # package for raster manipulation
 library(rgdal) # package for geospatial analysis
 ```
 
-First need to reformat the csv to be able to put it into python and get POC/SST data
+First need to reformat the csv to be able to put it into python and get physical data
 
 ```{r}
 #reading in csv, making it long form data and writing csv to export that new format of the data
@@ -36,7 +36,9 @@ sites <- read_csv(here("data", "bivalve_model", "poc_data", "test3.csv")) %>%
 #write_csv(sites, here("data", "bivalve_model","poc_data","test3_long.csv"))
 
 ```
-############## RUNNING CSV THROUGH PYTHON TO GET GEO DATA ####################
+
+
+############# Use NASA files to extract data & fill matrix ###################
 
 ```{r}
 # extracting locations for sites and creating vectors
@@ -50,10 +52,11 @@ sites_lon <- as.numeric(sites$longitude)
 
 
 ```{r}
-ncfile_1 <- nc_open( here("data", "bivalve_model","poc_data",  "AQUA_MODIS.20160301_20160331.L3m.MO.POC.poc.4km.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
-
-attributes(ncfile_1$var)
-attributes(ncfile_1$dim)
+# some example code that will help fugure out the forloop 
+# ncfile_1 <- nc_open( here("data", "bivalve_model","poc_data",  "AQUA_MODIS.20160301_20160331.L3m.MO.POC.poc.4km.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+# 
+# attributes(ncfile_1$var)
+# attributes(ncfile_1$dim)
 ```
 
 ```{r}
@@ -70,7 +73,7 @@ month <- march
 #################### Wrangling NetCDF Files ####################
 
 # Mixed layer depth
-```{r}
+```{r, include=FALSE, eval=FALSE}
 ## looking at the data
 ncfile_mix <- nc_open( here("data", "bivalve_model","data_NetCDF", "ECCO_L4_MIXED_LAYER_DEPTH_05DEG_MONTHLY_V4R4",  "OCEAN_MIXED_LAYER_DEPTH_mon_mean_2014-10_ECCO_V4r4_latlon_0p50deg.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
 
@@ -114,48 +117,66 @@ r <- rasterFromXYZ(mix_obs, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no
 
 ```
 
-
+Trying to for loop() through data to first gather metrics for each site (nested for loop()) and for each month (outer for loop())
 ## for looping through files
 ```{r}
 
+# setting wd to our data file so that R can find everything
 setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/ECCO_L4_MIXED_LAYER_DEPTH_05DEG_MONTHLY_V4R4")
 
-#create a holding vector/matrix
+# create a holding vector/matrix
+# this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
 holding <- matrix(data = NaN, nrow = 5000, ncol = 18)
 
+#first for loop()
 for(i in 1:length(mix_files)){
   
+  #open each file
   file <- nc_open(mix_files[i])
-    
+  
+  #pull the lat and lon variables from each nc file and create a long matrix of those coordinates
   lat <- ncvar_get(file, "latitude")
   lon <- ncvar_get(file, "longitude")
   lonlat <- as.matrix(expand.grid(lon, lat))
-  
+  #pull the mixed layer depth variable
   mix_array <- ncvar_get(file, "MXLDEPTH")
+  #turn that array into a vector
   mix_vec_long <- as.vector(mix_array)
   
+  #create a data frame of the lat, lon and mixed layer depth
   df <- data.frame(cbind(lonlat, mix_vec_long)) %>% #data in tidy format
   rename("Long" = "Var1",
          "Lat" = "Var2",
          "Mixed_Layer_Depth" = "mix_vec_long")
   
+  #turn this data frame into a raster
   r <- rasterFromXYZ(df, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
   
+  #nested for loop to extract data for each coordinate
   for(j in 1:length(matrix)){
     
     temp_lon <- sites_lon[j]
     temp_lat <- sites_lat[j]
     
-    extract_metric <- extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
-    holding[j] <- extract_metric
-  }
-  
-  matrix_mix <- data.frame(cbind(sites_lon, sites_lat, holding))
+    extract_metric[j] <- extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
     
-   }
+    ## trying to create a vector with all the extracted metrics from all the coordinates 1:length(matrix) ##
+    ## this vector is one month of data for all 5,000 site locations ##
+    # vec <- ## Blah i dont know how to do it
+  }
+  ## trying to basically cbind all the new vectors together, month after month
+ # holding$i <- vec ## also stuck here
+    
+}
 
+matrix_mix[] <- data.frame(cbind(sites_lon, sites_lat, holding))
+#resetting our wd to home
 setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 ```
+
+
+
+######################################
 
 # Surface temperature
 ```{r}
