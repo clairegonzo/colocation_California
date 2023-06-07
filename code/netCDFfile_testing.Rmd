@@ -59,21 +59,21 @@ sites_lon <- as.numeric(sites$longitude)
 # attributes(ncfile_1$dim)
 ```
 
-```{r}
-lat <- ncvar_get(ncfile_1, "lat")
-nlat <- dim(lat)
-
-lon <- ncvar_get(ncfile_1, "lon")
-nlon <- dim(lon) 
-
-month <- march
+```{r, include=FALSE, eval=FALSE}
+# lat <- ncvar_get(ncfile_1, "lat")
+# nlat <- dim(lat)
+# 
+# lon <- ncvar_get(ncfile_1, "lon")
+# nlon <- dim(lon) 
+# 
+# month <- march
 
 ```
 
 #################### Wrangling NetCDF Files ####################
 
 # Mixed layer depth
-```{r, include=FALSE, eval=FALSE}
+```{r}
 ## looking at the data
 ncfile_mix <- nc_open( here("data", "bivalve_model","data_NetCDF", "ECCO_L4_MIXED_LAYER_DEPTH_05DEG_MONTHLY_V4R4",  "OCEAN_MIXED_LAYER_DEPTH_mon_mean_2014-10_ECCO_V4r4_latlon_0p50deg.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
 
