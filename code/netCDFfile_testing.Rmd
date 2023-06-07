@@ -91,7 +91,7 @@ mix_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_
 ```
 
 # Organizing data frames (example file)
-```{r, eval=FALSE}
+```{r, eval=FALSE, include=FALSE}
 lat <- ncvar_get(ncfile_mix, "latitude")
 nlat <- dim(lat)
 
@@ -126,7 +126,7 @@ setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/
 
 # create a holding vector/matrix
 # this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
-holding <- matrix(data = NaN, nrow = 5000, ncol = 18)
+holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = 18))
 
 #first for loop()
 for(i in 1:length(mix_files)){
@@ -153,27 +153,28 @@ for(i in 1:length(mix_files)){
   r <- rasterFromXYZ(df, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
   
   #nested for loop to extract data for each coordinate
-  for(j in 1:length(matrix)){
+  for(j in 1:nrow(sites)){
     
     temp_lon <- sites_lon[j]
     temp_lat <- sites_lat[j]
     
-    extract_metric[j] <- extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+    extract_metric <- extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
     
-    ## trying to create a vector with all the extracted metrics from all the coordinates 1:length(matrix) ##
+    ## trying to create a vector with all the extracted metrics from all the coordinates 1:nrow(sites)
     ## this vector is one month of data for all 5,000 site locations ##
-    # vec <- ## Blah i dont know how to do it
-  }
-  ## trying to basically cbind all the new vectors together, month after month
- # holding$i <- vec ## also stuck here
+    holding[j,i] <-  extract_metric 
     
+  }
+  colname = mix_files[i] %>% str_split(pattern = "_") %>% unlist()
+  colnames(holding)[i] = colname[7]
+     
 }
 
-matrix_mix[] <- data.frame(cbind(sites_lon, sites_lat, holding))
+matrix_mix <- data.frame(cbind(sites_lon, sites_lat, holding))
+
 #resetting our wd to home
 setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 ```
-
 
 
 ######################################
