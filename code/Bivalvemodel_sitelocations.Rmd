@@ -1,0 +1,138 @@
+---
+title: "coordinates for aquaculture model"
+author: 'By: Claire Gonzales'
+date: "2023-04-06"
+output: html_document
+---
+
+This rmd document is for looking at the coordinates that Tom Bell used in his bivalve model and generating new ones for the rest of the CA coast.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+
+library(tidyverse)
+library(here)
+library(paletteer)
+library(ggplot2)
+library(cowplot)
+
+library("ggplot2")
+library("sf")
+library("rnaturalearth")
+library("rnaturalearthdata")
+
+```
+
+Let's load some data.
+```{r}
+
+world <- ne_countries(scale = "medium", returnclass = "sf") 
+# this provides a map of countries of the entire world. Use ne_countries to pull country data and choose the scale
+
+locations <- read_csv(here("data", "bivalve_model", "sites_fromTom.csv"))
+# this is the locations of the sites that Tom sent us. This list needs to be added to for the rest of the CA coast (this is not a shapefile)
+
+```
+
+
+```{r}
+ggplot(data = world) +
+  geom_sf() +
+  geom_point(data = locations, aes(x = longitude, y = latitude), shape = 21, fill = "darkblue") +
+  coord_sf(xlim = c(-121, -116.9), ylim = c(32.3, 35), expand = FALSE) +
+  #coord_sf(ylim = c(32, 35), expand = FALSE) +
+  theme(legend.title = element_blank(), legend.position= 'bottom') +
+  theme_minimal()
+```
+
+```{r}
+#zoom in 
+ggplot(data = world) +
+  geom_sf() +
+  geom_point(data = locations, aes(x = longitude, y = latitude), shape = 21, fill = "darkblue") +
+  coord_sf(xlim = c(-119.7, -118.9), ylim = c(34.0, 34.3), expand = FALSE) +
+  #coord_sf(ylim = c(32, 35), expand = FALSE) +
+  theme(legend.title = element_blank(), legend.position= 'bottom') +
+  theme_minimal()
+```
+
+Creating site locations with bathymetry attached to them. Any locations that are deeper than 200m or from on land will be discarded. The sites not discarded with get ROMs and POC data assigned to them and then will be spatialized. Kriging interpolation to create raster of model output.
+```{r}
+#Using this NOAA package to grab bathy for each set of lat longs
+
+library(marmap)
+```
+
+
+```{r}
+#write in csv data
+
+sites <- read_csv(here("data", "bivalve_model", "bivalvemodel_sites_5000pts_TableToExcel.csv")) %>% 
+  select(longitude, latitude, OID)
+```
+
+
+```{r}
+#getting data for our study area
+ca_bounds <-  getNOAA.bathy(lon1 = -114, lon2 = -127, lat1 = 42.2, lat2 = 32.2, resolution = 4)
+
+```
+
+```{r}
+# Creating color palettes
+blues <- c("lightsteelblue4", "lightsteelblue3",
+"lightsteelblue2", "lightsteelblue1")
+
+greys <- c(grey(0.6), grey(0.93), grey(0.99))
+```
+
+```{r}
+# plot the study area?
+plot(ca_bounds, image = TRUE, land = TRUE, lwd = 0.03, bpal = list(c(0, max(ca_bounds), greys), c(min(ca_bounds), 0, blues)))
+
+# Add coastline
+plot(ca_bounds, n = 1, lwd = 0.4, add = TRUE)
+
+# add sampling points to plot:
+points(sites$longitude, sites$latitude, pch = 21, col = "black", bg = "yellow", cex = 0.5)
+```
+
+```{r}
+# click twice on the map to delimit an area:
+#get.sample(ca_bounds, sites, col.lon = 1, col.lat = 2)
+
+bathy <- get.depth(ca_bounds, sites[,1:2], locator = FALSE)
+head(bathy)
+
+```
+
+```{r}
+#write csv for this bathy data
+write.csv(bathy, here("data", "bivalve_model", "sites_5000_bathyoutput.csv"))
+```
+
+
+Using the bathy output, removed any depths that were deeper than 200 meters or anything that had positive depth (aka those points were on land)
+
+```{r}
+# writing in csv with bathy limited sites
+sites_bathylimited <- read_csv(here("data", "bivalve_model", "sites_bathyoutput_200mlimit.csv"))
+```
+
+```{r}
+#### plotting the remaining points (n=2277) ####
+
+# plot the study area?
+plot(ca_bounds, image = TRUE, land = TRUE, lwd = 0.03, bpal = list(c(0, max(ca_bounds), greys), c(min(ca_bounds), 0, blues)))
+
+# Add coastline
+plot(ca_bounds, n = 1, lwd = 0.4, add = TRUE)
+
+# add sampling points to plot:
+points(sites_bathylimited$lon, sites_bathylimited$lat, pch = 21, col = "black", bg = "yellow", cex = 0.5)
+```
+
