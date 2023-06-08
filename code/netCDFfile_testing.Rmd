@@ -132,25 +132,13 @@ holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = 18))
 for(i in 1:length(mix_files)){
   
   #open each file
-  file <- nc_open(mix_files[i])
+  file <- mix_files[i]
   
-  #pull the lat and lon variables from each nc file and create a long matrix of those coordinates
-  lat <- ncvar_get(file, "latitude")
-  lon <- ncvar_get(file, "longitude")
-  lonlat <- as.matrix(expand.grid(lon, lat))
-  #pull the mixed layer depth variable
-  mix_array <- ncvar_get(file, "MXLDEPTH")
-  #turn that array into a vector
-  mix_vec_long <- as.vector(mix_array)
+  nc_open(file, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
   
-  #create a data frame of the lat, lon and mixed layer depth
-  df <- data.frame(cbind(lonlat, mix_vec_long)) %>% #data in tidy format
-  rename("Long" = "Var1",
-         "Lat" = "Var2",
-         "Mixed_Layer_Depth" = "mix_vec_long")
   
-  #turn this data frame into a raster
-  r <- rasterFromXYZ(df, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
+  r <- brick(file, varname = "MXLDEPTH")
+  
   
   #nested for loop to extract data for each coordinate
   for(j in 1:nrow(sites)){
@@ -158,7 +146,7 @@ for(i in 1:length(mix_files)){
     temp_lon <- sites_lon[j]
     temp_lat <- sites_lat[j]
     
-    extract_metric <- extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+    extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
     
     ## trying to create a vector with all the extracted metrics from all the coordinates 1:nrow(sites)
     ## this vector is one month of data for all 5,000 site locations ##
@@ -168,7 +156,7 @@ for(i in 1:length(mix_files)){
   colname = mix_files[i] %>% str_split(pattern = "_") %>% unlist()
   colnames(holding)[i] = colname[7]
      
-  nc_close(file)
+  nc_close(nc_open(file))
 }
 
 matrix_mix <- data.frame(cbind(sites_lon, sites_lat, holding))
@@ -180,7 +168,8 @@ setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 
 
 # Surface temperature
-```{r}
+```{r, include=FALSE, eval=FALSE}
+# Example to get an idea of how the for loop() should look
 ncfile_sst <- here("data", "bivalve_model","data_NetCDF", "OceanColor_SST",  "AQUA_MODIS.20141001_20141031.L3m.MO.SST.sst.4km.nc")
 
 nc_open(ncfile_sst, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
@@ -207,7 +196,6 @@ extract_metric
 sst_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_SST", pattern = "*.nc")
 ```
 
- ################## SST DATA ONLY CONTAINS NAs ##################
 ## for looping through files
 ```{r}
 
@@ -222,25 +210,13 @@ holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = length(ss
 for(i in 1:length(sst_files)){
   
   #open each file
-  file <- nc_open(sst_files[i])
+  file <- sst_files[i]
   
-  #pull the lat and lon variables from each nc file and create a long matrix of those coordinates
-  lat <- ncvar_get(file, "lat")
-  lon <- ncvar_get(file, "lon")
-  lonlat <- as.matrix(expand.grid(lon, lat))
-  #pull the mixed layer depth variable
-  sst_array <- ncvar_get(file, "sst")
-  #turn that array into a vector
-  sst_vec_long <- as.vector(sst_array)
+  nc_open(file, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
   
-  #create a data frame of the lat, lon and mixed layer depth
-  df <- data.frame(cbind(lonlat, sst_vec_long)) %>% #data in tidy format
-  rename("Long" = "Var1",
-         "Lat" = "Var2",
-         "SST" = "sst_vec_long")
   
-  #turn this data frame into a raster
-  r <- rasterFromXYZ(df, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
+  r <- brick(file, varname = "sst")
+  
   
   #nested for loop to extract data for each coordinate
   for(j in 1:nrow(sites)){
@@ -248,7 +224,7 @@ for(i in 1:length(sst_files)){
     temp_lon <- sites_lon[j]
     temp_lat <- sites_lat[j]
     
-    extract_metric <- extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+    extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
     
     ## trying to create a vector with all the extracted metrics from all the coordinates 1:nrow(sites)
     ## this vector is one month of data for all 5,000 site locations ##
@@ -258,7 +234,7 @@ for(i in 1:length(sst_files)){
   colname = sst_files[i] %>% str_split(pattern = "_") %>% unlist()
   colnames(holding)[i] = colname[2]
      
-  nc_close(file)
+  nc_close(nc_open(file))
 }
 
 matrix_sst <- data.frame(cbind(sites_lon, sites_lat, holding))
