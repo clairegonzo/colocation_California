@@ -181,11 +181,23 @@ setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 
 # Surface temperature
 ```{r}
-ncfile_sst <- nc_open( here("data", "bivalve_model","data_NetCDF", "OceanColor_SST",  "AQUA_MODIS.20141001_20141031.L3m.MO.SST.sst.4km.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+ncfile_sst <- here("data", "bivalve_model","data_NetCDF", "OceanColor_SST",  "AQUA_MODIS.20141001_20141031.L3m.MO.SST.sst.4km.nc")
+
+nc_open(ncfile_sst, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
 
 attributes(ncfile_sst$var)
 attributes(ncfile_sst$dim)
 
+print(ncfile_sst)
+
+r <- brick(ncfile_sst, varname = "sst")
+
+temp_lon <- sites_lon[1]
+temp_lat <- sites_lat[1]
+    
+extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+
+extract_metric
 ## lat and long names:
 ## "lat" and "lon"
 ```
@@ -195,6 +207,7 @@ attributes(ncfile_sst$dim)
 sst_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_SST", pattern = "*.nc")
 ```
 
+ ################## SST DATA ONLY CONTAINS NAs ##################
 ## for looping through files
 ```{r}
 
@@ -262,6 +275,8 @@ ncfile_current <- nc_open( here("data", "bivalve_model","data_NetCDF", "OSCAR_L4
 attributes(ncfile_current$var)
 attributes(ncfile_current$dim)
 
+r <- raster(ncfile_current, varname = "", crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
+
 ## lat and long names:
 ## "latitude" and "longitude"
 ```
@@ -270,6 +285,67 @@ attributes(ncfile_current$dim)
 ```{r}
 curvel_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OSCAR_L4_OC_FINAL_V2.0", pattern = "*.nc")
 ```
+
+## for looping through files
+```{r}
+
+# setting wd to our data file so that R can find everything
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OSCAR_L4_OC_FINAL_V2.0")
+
+# create a holding vector/matrix
+# this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
+holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = length(curvel_files)))
+
+#first for loop()
+for(i in 1:length(curvel_files)){
+  
+  #open each file
+  file <- nc_open(curvel_files[i])
+  
+  #pull the lat and lon variables from each nc file and create a long matrix of those coordinates
+  lat <- ncvar_get(file, "lat")
+  lon <- ncvar_get(file, "lon")
+  lonlat <- as.matrix(expand.grid(lon, lat))
+  #pull the mixed layer depth variable
+  sst_array <- ncvar_get(file, "sst")
+  #turn that array into a vector
+  sst_vec_long <- as.vector(sst_array)
+  
+  #create a data frame of the lat, lon and mixed layer depth
+  df <- data.frame(cbind(lonlat, sst_vec_long)) %>% #data in tidy format
+  rename("Long" = "Var1",
+         "Lat" = "Var2",
+         "SST" = "sst_vec_long")
+  
+  #turn this data frame into a raster
+  r <- rasterFromXYZ(df, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
+  
+  #nested for loop to extract data for each coordinate
+  for(j in 1:nrow(sites)){
+    
+    temp_lon <- sites_lon[j]
+    temp_lat <- sites_lat[j]
+    
+    extract_metric <- extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+    
+    ## trying to create a vector with all the extracted metrics from all the coordinates 1:nrow(sites)
+    ## this vector is one month of data for all 5,000 site locations ##
+    holding[j,i] <-  extract_metric 
+    
+  }
+  colname = sst_files[i] %>% str_split(pattern = "_") %>% unlist()
+  colnames(holding)[i] = colname[2]
+     
+  nc_close(file)
+}
+
+matrix_sst <- data.frame(cbind(sites_lon, sites_lat, holding))
+
+#resetting our wd to home
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
+```
+
+
 
 # POC
 ```{r}
