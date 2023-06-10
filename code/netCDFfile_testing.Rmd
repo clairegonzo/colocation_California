@@ -21,8 +21,9 @@ library(paletteer)
 library(ggplot2)
 library(ncdf4)
 library(sp)
-library(raster) # package for raster manipulation
+library(raster) # package for raster manipulation (will be retired Oct 2023)
 library(rgdal) # package for geospatial analysis
+library(terra) # updated verson of raster package
 ```
 
 First need to reformat the csv to be able to put it into python and get physical data
@@ -278,31 +279,36 @@ holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = length(cu
 for(i in 1:length(curvel_files)){
   
   #open each file
-  file <- nc_open(curvel_files[i])
+  file <- curvel_files[i]
+  nc_open(file)
+  
+  # file <- nc_open(curvel_files[i])
   
   # nc_open(file, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
   
   #pull the lat and lon variables from each nc file and create a long matrix of those coordinates
-  lat <- ncvar_get(file, "lat")
-  lon <- ncvar_get(file, "lon")
-  lonlat <- as.matrix(expand.grid(lon, lat))
-  #pull the mixed layer depth variable
-  curvel_array <- ncvar_get(file, "u")
+  # lat <- ncvar_get(file, "lat")
+  # lon <- ncvar_get(file, "lon")
+  # lonlat <- as.matrix(expand.grid(lon, lat))
+  # #pull the mixed layer depth variable
+  # curvel_array <- ncvar_get(file, "u")
+  # 
+  # #turn that array into a vector
+  # curvel_vec_long <- as.vector(curvel_array)
+  # 
+  # #create a data frame of the lat, lon and mixed layer depth
+  # df <- data.frame(cbind(lonlat, curvel_vec_long)) %>% #data in tidy format
+  # rename("Long" = "Var1",
+  #        "Lat" = "Var2",
+  #        "Current_Velocity_Zonal" = "curvel_vec_long")
+  # 
+  # #turn this data frame into a raster
+  # r <- rasterFromXYZ(df, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
   
-  #turn that array into a vector
-  curvel_vec_long <- as.vector(curvel_array)
-  
-  #create a data frame of the lat, lon and mixed layer depth
-  df <- data.frame(cbind(lonlat, curvel_vec_long)) %>% #data in tidy format
-  rename("Long" = "Var1",
-         "Lat" = "Var2",
-         "Current_Velocity_Zonal" = "curvel_vec_long")
-  
-  #turn this data frame into a raster
-  r <- rasterFromXYZ(df, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
-  
-  # r <- brick(file, varname = "u")
-  
+   # r <- brick(file, varname = "u")
+   
+   r <- rast(file)
+   ext(r)=c(-180, 180, -90, 90)
   
   #nested for loop to extract data for each coordinate
   for(j in 1:nrow(sites)){
@@ -310,17 +316,17 @@ for(i in 1:length(curvel_files)){
     temp_lon <- sites_lon[j]
     temp_lat <- sites_lat[j]
     
-    extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+    extract_metric <- terra::extract(r[names(r)[1]], vect(cbind(temp_lon, temp_lat), crs="+proj=longlat +datum=WGS84"), method="simple", cells=FALSE, xy=FALSE)
     
     ## create vector with all the extracted metrics from all the coordinates 1:nrow(sites)
     ## this vector is one month of data for all 5,000 site locations ##
-    holding[j,i] <-  extract_metric 
+    holding[j,i] <-  extract_metric$u
     
   }
   colname = curvel_files[i] %>% str_split(pattern = "_") %>% unlist()
   colnames(holding)[i] = colname[4]
      
-  nc_close(file)
+  nc_close(nc_open(file))
 }
 
 matrix_curvel_zonal <- data.frame(cbind(sites_lon, sites_lat, holding))
