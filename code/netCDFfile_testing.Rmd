@@ -477,3 +477,9 @@ alldata <- data.frame(
 )
 ```
 
+## write csv of all data dataframe
+
+```{r}
+write.csv(alldata, here("data", "alldata_forbivalvemodel.csv"))
+```
+
