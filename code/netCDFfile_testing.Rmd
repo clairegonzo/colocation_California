@@ -464,8 +464,16 @@ setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 
 # creating full data frame
 ```{r}
+data_mixsst <- data.frame(
+  merge(matrix_mix, matrix_sst, by = c("sites_lon", "sites_lat"))
+)
+
+data_curvelpoc <- data.frame(
+  merge(matrix_curvel_zonal, matrix_poc, by = c("sites_lon", "sites_lat"))
+)
+
 alldata <- data.frame(
-  merge(matrix_mix, matrix_sst, matrix_curvel_zonal, matrix_poc, by = c("sites_lon", "sites_lat"))
+  merge(data_mixsst, data_curvelpoc, by = c("sites_lon", "sites_lat"))
 )
 ```
 
