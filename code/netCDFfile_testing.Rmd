@@ -403,6 +403,8 @@ setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 ```{r}
 ncfile_poc <- nc_open( here("data", "bivalve_model","data_NetCDF", "OceanColor_POC",  "AQUA_MODIS.20141001_20141031.L3m.MO.POC.poc.4km.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
 
+print(ncfile_poc)
+
 attributes(ncfile_poc$var)
 attributes(ncfile_poc$dim)
 
@@ -481,5 +483,15 @@ alldata <- data.frame(
 
 ```{r}
 write.csv(alldata, here("data", "alldata_forbivalvemodel.csv"))
+```
+
+## writing in new csv of the data
+This data frame has been adjusted to make the daily current velocity data a monthly average
+
+```{r}
+new_data <- read.csv(here("data", "bivalve_model", "celldata3.csv")) %>% 
+  na.omit() # removing lines with any NAs in any columns
+
+# write.csv(new_data, here("data", "celldata4.csv"))
 ```
 
