@@ -489,9 +489,10 @@ write.csv(alldata, here("data", "alldata_forbivalvemodel.csv"))
 This data frame has been adjusted to make the daily current velocity data a monthly average
 
 ```{r}
-new_data <- read.csv(here("data", "bivalve_model", "celldata3.csv")) %>% 
-  na.omit() # removing lines with any NAs in any columns
+new_data <- read.csv(here("data", "bivalve_model", "celldata3.csv"), header = FALSE) %>% 
+  na.omit() %>% # removing lines with any NAs in any columns
+  dplyr::select(!1) 
 
-# write.csv(new_data, here("data", "celldata4.csv"))
+write.csv(new_data, here("data", "celldata4.csv"), col.names = F)
 ```
 
