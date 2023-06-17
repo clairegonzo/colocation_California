@@ -203,6 +203,9 @@ mussel_derivative <- function(T, N) {
 
 ## Mussel ODE Solve
 ```{r}
+
+### Error in this section ###
+# interp1 is struggling because we have to give it vectors of the same length (18) ##
 mussel_odeSolve <- function(cellno, celldata, days) {
   # Interpolate to get daily values for Temp, Vs, F, mld (so datasets match 'Time')
   year_Oct2Mar <- seq(as.Date("2014-10-01"), as.Date("2016-03-31"), by = "day")
@@ -210,19 +213,38 @@ mussel_odeSolve <- function(cellno, celldata, days) {
   dayno <- which(days[1] == year_Oct2Mar)[1]
   
   # Make environmental parameters global for use in the derivative function
-  mld_monthly <- celldata[cellno, 4:21]
+  mld_monthly <- celldata[
+    #cellno, 
+    4:21]
   mld_daily <- interp1(1:18, mld_monthly, 1:.0311:18, method = "pchip")
   mlds <- mld_daily[dayno:dayno + growPeriod]
   
-  Temp_monthly <- celldata[cellno, 22:39] + 273
+#   # Create an empty matrix to store the interpolated values
+# mld_daily <- matrix(nrow = length(mld_monthly[[1]]), ncol = ncol(mld_monthly))
+# 
+# # Convert each column to a numeric vector and apply interp1(), and fill the matrix with the interpolated values
+# for (i in 1:nrow(mld_monthly)) {
+#   row_vector <- as.numeric(mld_monthly[[, i]])
+#   interp_vector <- interp1(1:18, row_vector, 1:0.0311:18, method = "pchip")
+#   mld_daily[, i] <- interp_vector
+# }
+
+  
+  Temp_monthly <- celldata[
+    # cellno, 
+    22:39] + 273
   Temp_daily <- interp1(1:18, Temp_monthly, 1:.0311:18, method = "pchip")
   Temps <- Temp_daily[dayno:dayno + growPeriod]
   
-  F_monthly <- celldata[cellno, 58:75] / 12e9
+  F_monthly <- celldata[
+    # cellno, 
+    58:75] / 12e9
   F_daily <- interp1(1:18, F_monthly, 1:.0311:18, method = "pchip")
   Fs <- F_daily[dayno:dayno + growPeriod]
   
-  V_monthly <- celldata[cellno, 40:57] * 8640000
+  V_monthly <- celldata[
+    # cellno, 
+    40:57] * 8640000
   V_daily <- interp1(1:18, V_monthly, 1:.0311:18, method = "pchip")
   Vs <- V_daily[dayno:dayno + growPeriod]
   
@@ -331,17 +353,17 @@ mussel_derivative <- function(N, t, mlds, Temps, Fs, Vs) {
 
 
 
-
-
 ## Execute Lookup Table or Single Cell
 ```{r}
 # prompt
 Ans0 <- readline(prompt = 'Create look-up table (T) or evaluate single cell (S)? (T/S)\n')
+T
 assert <- function(test, message) {
   if (!test) {
     stop(message)
   }
 }
+
 assert(Ans0 == 'T' || Ans0 == 'S', 'Please enter "T" or "S"')
 tic()
 ```
