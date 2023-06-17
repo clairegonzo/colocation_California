@@ -246,7 +246,7 @@ setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 
 
 # Current veloicty
-```{r}
+```{r, eval=FALSE}
 ncfile_current <- nc_open( here("data", "bivalve_model","data_NetCDF", "OSCAR_L4_OC_FINAL_V2.0",  "oscar_currents_final_20141001.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
 
 print(ncfile_current)
@@ -348,30 +348,12 @@ holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = length(cu
 for(i in 1:length(curvel_files)){
   
   #open each file
-  file <- nc_open(curvel_files[i])
-  
-  # nc_open(file, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
-  
-  #pull the lat and lon variables from each nc file and create a long matrix of those coordinates
-  lat <- ncvar_get(file, "lat")
-  lon <- ncvar_get(file, "lon")
-  lonlat <- as.matrix(expand.grid(lon, lat))
-  #pull the mixed layer depth variable
-  curvel_array <- ncvar_get(file, "v")
-  
-  #turn that array into a vector
-  curvel_vec_long <- as.vector(curvel_array)
-  
-  #create a data frame of the lat, lon and mixed layer depth
-  df <- data.frame(cbind(lonlat, curvel_vec_long)) %>% #data in tidy format
-  rename("Long" = "Var1",
-         "Lat" = "Var2",
-         "Current_Velocity_Meridional" = "curvel_vec_long")
+  file <- curvel_files[i]
+  nc_open(file)
   
   #turn this data frame into a raster
-  r <- rasterFromXYZ(df, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
-  
-  # r <- brick(file, varname = "u")
+  r <- rast(file)
+  ext(r)=c(-180, 180, -90, 90)
   
   
   #nested for loop to extract data for each coordinate
@@ -380,17 +362,17 @@ for(i in 1:length(curvel_files)){
     temp_lon <- sites_lon[j]
     temp_lat <- sites_lat[j]
     
-    extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+    extract_metric <- terra::extract(r[names(r)[1]], vect(cbind(temp_lon, temp_lat), crs="+proj=longlat +datum=WGS84"), method="simple", cells=FALSE, xy=FALSE)
     
     ## create vector with all the extracted metrics from all the coordinates 1:nrow(sites)
     ## this vector is one month of data for all 5,000 site locations ##
-    holding[j,i] <-  extract_metric 
+    holding[j,i] <-  extract_metric$u
     
   }
   colname = curvel_files[i] %>% str_split(pattern = "_") %>% unlist()
   colnames(holding)[i] = colname[4]
      
-  nc_close(file)
+  nc_close(nc_open(file))
 }
 
 matrix_curvel_meridional <- data.frame(cbind(sites_lon, sites_lat, holding))
@@ -464,14 +446,51 @@ matrix_poc <- data.frame(cbind(sites_lon, sites_lat, holding))
 setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 ```
 
-# creating full data frame
+##wrangling current velocity data
 ```{r}
+
+matrix_curvel_zonal_ave <- matrix_curvel_zonal %>% 
+  mutate(
+    X201410_ave = mean(select(matrix_curvel_zonal, starts_with("X201410"))),
+    X201411_ave = mean(select(matrix_curvel_zonal, starts_with("X201411"))),
+    X201412_ave = mean(select(matrix_curvel_zonal, starts_with("X201412"))),
+    X201501_ave = mean(select(matrix_curvel_zonal, starts_with("X201501"))),
+    X201502_ave = mean(select(matrix_curvel_zonal, starts_with("X201502"))),
+    X201503_ave = mean(select(matrix_curvel_zonal, starts_with("X201503"))),
+    X201504_ave = mean(select(matrix_curvel_zonal, starts_with("X201504"))),
+    X201505_ave = mean(select(matrix_curvel_zonal, starts_with("X201505"))),
+    X201506_ave = mean(select(matrix_curvel_zonal, starts_with("X201506"))),
+    X201507_ave = mean(select(matrix_curvel_zonal, starts_with("X201507"))),
+    X201508_ave = mean(select(matrix_curvel_zonal, starts_with("X201508"))),
+    X201509_ave = mean(select(matrix_curvel_zonal, starts_with("X201509"))),
+    X201510_ave = mean(select(matrix_curvel_zonal, starts_with("X201510"))),
+    X201511_ave = mean(select(matrix_curvel_zonal, starts_with("X201511"))),
+    X201512_ave = mean(select(matrix_curvel_zonal, starts_with("X201512"))),
+    X201601_ave = mean(select(matrix_curvel_zonal, starts_with("X201601"))),
+    X201602_ave = mean(select(matrix_curvel_zonal, starts_with("X201602"))),
+    X201603_ave = mean(select(matrix_curvel_zonal, starts_with("X201603"))),
+                            )
+
+# data_curvel <- data.frame(
+#   merge(matrix_curvel_zonal, matrix_curvel_meridional, by = c("sites_lon", "sites_lat"))
+# ) %>% 
+#   mutate(X201410_ave = mean(select()))
+
+```
+
+
+# creating full data frame
+```{r, eval=FALSE}
 data_mixsst <- data.frame(
   merge(matrix_mix, matrix_sst, by = c("sites_lon", "sites_lat"))
 )
 
+# data_curvel <- data.frame(
+#   merge(matrix_curvel_zonal, matrix_curvel_meridional, by = c("sites_lon", "sites_lat"))
+# )
+
 data_curvelpoc <- data.frame(
-  merge(matrix_curvel_zonal, matrix_poc, by = c("sites_lon", "sites_lat"))
+  merge(data_curvel, matrix_poc, by = c("sites_lon", "sites_lat"))
 )
 
 alldata <- data.frame(
@@ -482,13 +501,13 @@ alldata <- data.frame(
 ## write csv of all data dataframe
 
 ```{r}
-write.csv(alldata, here("data", "alldata_forbivalvemodel.csv"))
+#write.csv(alldata, here("data", "alldata_forbivalvemodel.csv"))
 ```
 
 ## writing in new csv of the data
 This data frame has been adjusted to make the daily current velocity data a monthly average
 
-```{r}
+```{r, eval=FALSE}
 new_data <- read.csv(here("data", "bivalve_model", "celldata3.csv"), header = FALSE) %>% 
   na.omit() %>% # removing lines with any NAs in any columns
   dplyr::select(!1) 
