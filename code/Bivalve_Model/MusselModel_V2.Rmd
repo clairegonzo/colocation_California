@@ -71,7 +71,7 @@ mussel_odeSolve <- function(cellno, celldata, days) {
     interp_vector <- pchip(1:18, row_vector, seq(1,18, by = 0.0311))
     mld_daily[i ,] <- interp_vector
     }
-  mlds <- mld_daily[dayno:dayno + growPeriod]
+  mlds <- mld_daily[dayno:(dayno + growPeriod)]
   
   ## Temperature in Kelvin
   Temp_monthly <- celldata[22:39] + 273
@@ -83,7 +83,7 @@ mussel_odeSolve <- function(cellno, celldata, days) {
     interp_vector <- pchip(1:18, row_vector, seq(1,18, by = 0.0311))
     Temp_daily[i ,] <- interp_vector
     }
-  Temps <- Temp_daily[dayno:dayno + growPeriod]
+  Temps <- Temp_daily[dayno:(dayno + growPeriod)]
   
   ## POC in molC/cm3
   # Calculation: X (mgC/m3) * (1molC/12000mgC) * (1m3/1000000cm3)
@@ -96,7 +96,7 @@ mussel_odeSolve <- function(cellno, celldata, days) {
     interp_vector <- pchip(1:18, row_vector, seq(1,18, by = 0.0311))
     F_daily[i ,] <- interp_vector
     }
-  Fs <- F_daily[dayno:dayno + growPeriod]
+  Fs <- F_daily[dayno:(dayno + growPeriod)]
   
   ## Current speed in cm/d
   # Calculation: Input data = m/s; X (100cm/m) * (86400s/d)
@@ -109,11 +109,11 @@ mussel_odeSolve <- function(cellno, celldata, days) {
     interp_vector <- pchip(1:18, row_vector, seq(1,18, by = 0.0311))
     V_daily[i ,] <- interp_vector
     }
-  Vs <- V_daily[dayno:dayno + growPeriod]
+  Vs <- V_daily[dayno:(dayno + growPeriod)]
   
   
   # Set time range/length of harvest cycle
-  Time <- days
+  Time <- as.numeric(days)
   
   # Set initial conditions
   # Addmypet parameters from http://www.bio.vu.nl/thb/deb/deblab/add_my_pet/entries_web/i_results_Mytilus_galloprovincialis.html
@@ -162,10 +162,13 @@ mussel_odeSolve <- function(cellno, celldata, days) {
   
   # ENVIRONMENTAL VARIABLES
   # Interpolate using cubic spline
-    Temp <- pracma::interp1(Time, Temps, T, method = "pchip")
-    V <- pracma::interp1(Time, Vs, T, method = "pchip")
-    mld <- pracma::interp1(Time, mlds, T, method = "pchip") 
-    F_in <- pracma::interp1(Time, Fs, T, method = "pchip")
+    #~#~#~##~############ ERROR HERE #################~#~##~#~#
+    # why do we even need to reintorpolate these values???? #
+    Temp <- pracma::interp1(Time, Temps, T, method = "cubic")
+    V <- pracma::interp1(Time, Vs, T, method = "cubic")
+    mld <- pracma::interp1(Time, mlds, T, method = "cubic") 
+    F_in <- pracma::interp1(Time, Fs, T, method = "cubic")
+
   
   # STATIC PARAMETERS
   # Rate parameter values given at reference temperature of 283K
@@ -291,7 +294,7 @@ mussel_odeSolve <- function(cellno, celldata, days) {
   
   # ODE Solver
   options <- c(atol = 1e-7, rtol = 1e-7)
-  sol <- pracma::ode23s(y0 = Init, times = Time, func = mussel_derivative, h = NULL, atol = options$abstol, rtol = options$reltol)
+  sol <- pracma::ode23s(f = mussel_derivative, t0 = Time[1], tfinal = Time[length(Time)], y0 = Init, atol = options$atol, rtol = options$rtol)
   
   # Derived Values (weights of product)
   deltam <- 0.1989  # aspect ratio; see notes on size measures
@@ -332,8 +335,8 @@ mussel_odeSolve <- function(cellno, celldata, days) {
 ```{r}
 # Lookup Table ONLY
 
-yield <- rep(0, length(celldata))
-Wets <- matrix(NA, nrow = length(celldata), ncol = harvestcycle + 2)
+yield <- rep(0, nrow(celldata))
+Wets <- matrix(NA, nrow = nrow(celldata), ncol = harvestcycle + 2)
 ProblemCells <- matrix(0, nrow = nrow(celldata), ncol = 2)
   
 for (i in 1:length(yield)) {
@@ -392,7 +395,7 @@ if (Ans0 == "T") {
   }
   
   #save(ProblemCells, file = "ProblemCells.RData")
-  lookuptable <- cbind(celldata[, 1:4], yield, yield / 1000)
+  lookuptable <- cbind(celldata[1:4], yield, yield / 1000)
   #save(lookuptable, file = "Yield.RData")
   
 } else {
