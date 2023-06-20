@@ -1,0 +1,130 @@
+---
+title: "POC timeseries"
+author: 'By: Claire Gonzales'
+date: "2023-04-21"
+output: html_document
+---
+
+This .rmd is for extracting data from the NetCDF files and create a matrix with that information that can feed into my bivalve model. I want monthly averaged data with the sites on the y axis (as rows) and each of the 18 months on the x axis (as columns).
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+
+library(tidyverse)
+library(here)
+#library(paletteer)
+library(ggplot2)
+library(ncdf4)
+library(sp)
+library(raster) # package for raster manipulation (will be retired Oct 2023)
+library(rgdal) # package for geospatial analysis
+#library(terra) # updated verson of raster package
+```
+
+# Creating my list of location queries
+```{r}
+# extracting locations for sites and creating vectors
+
+sites <- read.csv(here("data", "bivalve_model", "bivalvemodel_sites_5000pts_TableToExcel.csv"))
+
+sites_lat <- as.numeric(sites$latitude)
+sites_lon <- as.numeric(sites$longitude)
+
+```
+
+
+############# Download NASA NetCDF files  ###################
+From: https://oceandata.sci.gsfc.nasa.gov/directdataaccess/Level-3%20Mapped/Aqua-MODIS/2016/
+Using monthly averages at 4km resolution
+
+
+################## Wrangling NetCDF Files ##################
+
+# Mixed layer depth
+```{r}
+## looking at the data
+ncfile_mix <- nc_open( here("data", "bivalve_model","data_NetCDF", "ECCO_L4_MIXED_LAYER_DEPTH_05DEG_MONTHLY_V4R4",  "OCEAN_MIXED_LAYER_DEPTH_mon_mean_2014-10_ECCO_V4r4_latlon_0p50deg.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+
+attributes(ncfile_mix$var)
+attributes(ncfile_mix$dim)
+
+## lat and long names:
+## "latitude" and "longitude"
+```
+
+
+Trying to for loop() through data to first gather metrics for each site (nested for loop()) and for each month (outer for loop())
+
+
+# POC
+```{r}
+#First, pick one of the .nc files to look at
+ncfile_poc <- nc_open( here("data", "bivalve_model","data_NetCDF", "OceanColor_POC",  "AQUA_MODIS.20141001_20141031.L3m.MO.POC.poc.4km.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+
+print(ncfile_poc)
+
+attributes(ncfile_poc$var)
+attributes(ncfile_poc$dim)
+
+## lat and long names:
+## "lat" and "lon"
+```
+
+## Creating a list of the NetCDF files I want to work with
+```{r}
+poc_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_POC", pattern = "*.nc")
+```
+
+## for looping through files
+```{r}
+
+# setting wd to our data file so that R can find everything
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_POC")
+
+# create a holding vector/matrix
+# this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
+holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = length(poc_files)))
+
+#first for loop()
+for(i in 1:length(poc_files)){
+  
+  #open each file
+  file <- poc_files[i]
+  
+  nc_open(file, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
+  
+  # save as a raster brick
+  r <- brick(file, varname = "poc")
+  
+  
+  #nested for loop to extract data for each coordinate
+  for(j in 1:nrow(sites)){
+    
+    temp_lon <- sites_lon[j]
+    temp_lat <- sites_lat[j]
+    
+    extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+    
+    ## trying to create a vector with all the extracted metrics from all the coordinates 1:nrow(sites)
+    ## this vector is one month of data for all 5,000 site locations ##
+    holding[j,i] <-  extract_metric 
+    
+  }
+  colname = poc_files[i] %>% str_split(pattern = "_") %>% unlist()
+  colnames(holding)[i] = colname[2]
+     
+  nc_close(nc_open(file))
+}
+
+matrix_poc <- data.frame(cbind(sites_lon, sites_lat, holding))
+
+#resetting our wd to home
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
+```
+
+
