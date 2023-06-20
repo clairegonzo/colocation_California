@@ -164,7 +164,7 @@ mussel_odeSolve <- function(cellno, celldata, days) {
   # Interpolate using cubic spline
     #~#~#~##~############ ERROR HERE #################~#~##~#~#
     # why do we even need to reintorpolate these values???? #
-    Temp <- pracma::interp1(Time, Temps, T, method = "cubic")
+    Temp <- pracma::interp1(Time, Temps, T, method = "cubic") #consider using approx() instead of interp1()
     V <- pracma::interp1(Time, Vs, T, method = "cubic")
     mld <- pracma::interp1(Time, mlds, T, method = "cubic") 
     F_in <- pracma::interp1(Time, Fs, T, method = "cubic")
