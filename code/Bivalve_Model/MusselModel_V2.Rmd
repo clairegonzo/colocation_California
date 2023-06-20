@@ -1,0 +1,423 @@
+---
+title: "MusselModel_V2"
+author: 'By: Claire Gonzales'
+date: "2023-06-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+
+library(tidyverse)
+library(here)
+library(paletteer)
+library(ggplot2)
+library(pracma)
+library(assertthat)
+
+```
+
+```{r}
+# Mussel Model Execute
+
+# Import data
+celldata <- read.csv(here("data", "bivalve_model", "celldata4.csv"), header = FALSE)
+
+# Create Time variable
+year_Oct2Mar <- seq(as.Date("2014-10-01"), as.Date("2016-03-31"), by = "day")  # Harvest period range: 10/14 - 03/2016
+startdate <- as.Date("2014-10-01")  # Set start date here
+harvestcycle <- 365
+days <- seq(startdate, by = "day", length.out = (harvestcycle + 2))
+resetdate <- as.Date("2015-04-01")  # if harvest cycle extends beyond Mar 2016, then model will loop back to resetdate
+row <- match(resetdate, year_Oct2Mar)
+
+for (i in 1:length(days)) {
+  while (days[i] > tail(year_Oct2Mar, 1)) {
+    days[i] <- year_Oct2Mar[row]
+    row <- row + 1
+  }
+}
+
+```
+
+
+```{r}
+## Functions
+mussel_odeSolve <- function(cellno, celldata, days) {
+  # Interpolate to get daily values for Temp, Vs, F, mld (so datasets match 'Time')
+  year_Oct2Mar <- seq(as.Date("2014-10-01"), as.Date("2016-03-31"), by = "day")
+  growPeriod <- length(days) - 1
+  dayno <- which(days[1] == year_Oct2Mar)[1]
+  
+  # # Make environmental parameters global for use in the derivative function
+  # globalenv$mlds <- NULL
+  # globalenv$Temps <- NULL
+  # globalenv$Fs <- NULL
+  # globalenv$Vs <- NULL
+  # globalenv$Time <- NULL
+  
+  ## Mixed layer depth in meters(m)
+  mld_monthly <- celldata[4:21]
+  
+  # Create an empty matrix to store the interpolated values
+  mld_daily <- matrix(nrow = length(mld_monthly[[1]]), ncol = 547)
+  # Convert each column to a numeric vector and apply pchip(), and fill the matrix with the interpolated values
+  for (i in 1:nrow(mld_monthly)) {
+    row_vector <- as.numeric(mld_monthly[i,])
+    interp_vector <- pchip(1:18, row_vector, seq(1,18, by = 0.0311))
+    mld_daily[i ,] <- interp_vector
+    }
+  mlds <- mld_daily[dayno:dayno + growPeriod]
+  
+  ## Temperature in Kelvin
+  Temp_monthly <- celldata[22:39] + 273
+  #holding matrix
+  Temp_daily <- matrix(nrow = length(Temp_monthly[[1]]), ncol = 547)
+  # Convert each column to a numeric vector and apply pchip(), and fill the matrix with the interpolated values
+  for (i in 1:nrow(Temp_monthly)) {
+    row_vector <- as.numeric(Temp_monthly[i,])
+    interp_vector <- pchip(1:18, row_vector, seq(1,18, by = 0.0311))
+    Temp_daily[i ,] <- interp_vector
+    }
+  Temps <- Temp_daily[dayno:dayno + growPeriod]
+  
+  ## POC in molC/cm3
+  # Calculation: X (mgC/m3) * (1molC/12000mgC) * (1m3/1000000cm3)
+  F_monthly <- celldata[58:75] / 12e9
+  # holding matrix
+  F_daily <- matrix(nrow = length(F_monthly[[1]]), ncol = 547)
+  # Convert each column to a numeric vector and apply pchip(), and fill the matrix with the interpolated values
+  for (i in 1:nrow(F_monthly)) {
+    row_vector <- as.numeric(F_monthly[i,])
+    interp_vector <- pchip(1:18, row_vector, seq(1,18, by = 0.0311))
+    F_daily[i ,] <- interp_vector
+    }
+  Fs <- F_daily[dayno:dayno + growPeriod]
+  
+  ## Current speed in cm/d
+  # Calculation: Input data = m/s; X (100cm/m) * (86400s/d)
+  V_monthly <- celldata[40:57] * 8640000
+  # holding matrix
+  V_daily <- matrix(nrow = length(V_monthly[[1]]), ncol = 547)
+  # Convert each column to a numeric vector and apply pchip(), and fill the matrix with the interpolated values  
+  for (i in 1:nrow(V_monthly)) {
+    row_vector <- as.numeric(V_monthly[i,])
+    interp_vector <- pchip(1:18, row_vector, seq(1,18, by = 0.0311))
+    V_daily[i ,] <- interp_vector
+    }
+  Vs <- V_daily[dayno:dayno + growPeriod]
+  
+  
+  # Set time range/length of harvest cycle
+  Time <- days
+  
+  # Set initial conditions
+  # Addmypet parameters from http://www.bio.vu.nl/thb/deb/deblab/add_my_pet/entries_web/i_results_Mytilus_galloprovincialis.html
+  
+  # physical length 0.3 mm = 0.03cm (approx from Bernard)
+  # at birth: 0.00885056 (addmypet)
+  L_w_init <- 0.03
+  
+  # mol reserve C/mol structural C
+  # initial reserve mass at growth ceasing at birth = 1.49992e-010 molC (addymypet)
+  # initial structural mass at birth (molC) = 8.86389e-011 (addmypet)
+  mE_init <- (4.24e-10 / 3.22e-10)
+  
+  # mol gonadal (C mol)
+  MR_init <- 0
+  
+  # POC (molC/cm3)
+  F_init <- Fs[1]
+  
+  # initial number of mussels in farm (# indiv.)
+  # Assumptions:
+  # 100 lines per farm
+  # 13,000 feet of fuzzy rope per line
+  # 100 mussels per foot of fuzzy rope
+  n_init <- 100 * 13000 * 100
+  
+  Init <- c(mE_init, L_w_init, MR_init, F_init, n_init)
+  
+  ##########################################################################
+  ######## MUSSEL DERIVATIVE ########
+  ##########################################################################
+  mussel_derivative <- function(T, N) {
+  # GLOBAL VARIABLES
+  # globalenv()$Temps <- Temps
+  # globalenv()$mlds <- mlds
+  # globalenv()$Vs <- Vs
+  # globalenv()$Fs <- Fs
+  # globalenv()$Time <- Time
+  
+  # STATE VARIABLES
+    mE <- N[1] # Reserve biomass (molC)
+    L_w <- N[2] # Physical length (molC)
+    MR <- N[3] # Reproductive biomass (molC)
+    F <- N[4] # POC concentration (molC/cm3)
+    n <- N[5] # Time-dependent abundance of mussels in the farm modified by mortality rate (dn) in units of (# indiv.)
+  
+  # ENVIRONMENTAL VARIABLES
+  # Interpolate using cubic spline
+    Temp <- pracma::interp1(Time, Temps, T, method = "pchip")
+    V <- pracma::interp1(Time, Vs, T, method = "pchip")
+    mld <- pracma::interp1(Time, mlds, T, method = "pchip") 
+    F_in <- pracma::interp1(Time, Fs, T, method = "pchip")
+  
+  # STATIC PARAMETERS
+  # Rate parameter values given at reference temperature of 283K
+    v_ref <- 0.01359 # energy conductance rate cm/d
+    kM_ref <- 0.00447539 # maintenance rate coeff 1/d
+    maint_ratio <- 0.446888
+    yEX <- 0.696818 # yield of reserves from food (Cmole/Cmole; depends on food quality)
+    yVE <- 0.878007 # yield of structure from reserves
+    deltam <- 0.1989 # aspect ratio; see notes on size measures
+    kappa <- 0.9283 # fraction of reserves committed to growth + somatic maintenance
+    kappar <- 0.95 # conversion efficiency of reserves to gonad biomass
+    Mvdensity <- 0.0041841 # density of structure molC/cm3
+    Ehp <- 97.41 # maturity at puberty, J
+    mu_E <- 550000 # chemical potential of reserves, J/mol
+    Lp <- 0.753047 # structural length at puberty, cm
+    Jxmax <- 0.0000783383 # max surface specific feeding rate Cmoles/d cm2 for detrital C (addmypet)
+  
+  # For T conversion
+    Ta <- 3243
+    Tref <- 293
+  
+  # TEMPERATURE DEPENDENT PARAMETERS
+  # Conversion function to calculate rate parameters for actual temperature
+    Arrh <- exp((Ta / Tref) - (Ta / Temp))
+  
+    v <- Arrh * v_ref # temperature adjusted energy conductance rate (cm/d)
+    v_w <- v / deltam # temperature adjusted physical length conversion rate (cm/d)
+    Mvdensity_w <- Mvdensity * deltam^3
+    Lp_w <- Lp / deltam # shell length at puberty (approx 1.2 cm)
+    kM <- kM_ref * Arrh # temperature adjusted maintenance rate coeff (1/d)
+    jEM <- 1 * kM / yVE # 1.4672; kM/yVE [maintenance rate coeff/yield of structure from reserves] (1/d)
+    kJ <- maint_ratio * jEM * yVE # = maint_ratio * kM [maintenance ratio * maintenance coefficient]
+  
+  # FUNCTIONAL RESPONSE
+  # Farm dimensions
+    farm_area <- 1000 * mld # Cross-sectional area of farm in m2
+  
+  # Food competition
+    r <- V * farm_area * 10000 # V(cm/d) * farm_area(m2) * 10000(cm2/m2) = (cm3/d)
+    supply <- F_in * r # F_in(molC/cm3) * r(cm3/d) = (molC/d)
+    Fh <- 1.21e-8 # half saturation constant (molC/cm3)
+    f <- F / (Fh + F) # scaled functional response
+    Jx <- Jxmax * L_w^2 * f # scaled individual rate of food consumption (molC/d)
+    consumption <- n * Jx # total food consumption by whole mussel population (molC/d)
+    dF <- supply - consumption - r * F
+  
+  # GROWTH EQUATIONS
+    ME <- Mvdensity_w * mE * L_w^3
+    if ((kappa * v_w * mE) > (jEM * L_w)) {
+    # Then there is growth
+      dmE <- yEX * Jx / (Mvdensity_w * L_w^3) - v_w * mE / L_w # reserve dynamics (mol reserve C/mol structural C time)
+      dL_w <- (kappa * v_w * mE - jEM * L_w) / (3 * kappa * mE + 3 / yVE) # shell growth
+      if (L_w >= Lp_w) {
+        Jcr <- kappar * ((1 - kappa) * mE * Mvdensity_w * (v_w * L_w^2 + yVE * jEM * L_w^3) / (kappa * mE * yVE + 1) - kJ * Ehp / mu_E) # gonad production rate (mol C/time)
+        } else {
+          Jcr <- 0
+          }
+      } else {
+        if (v_w * mE > jEM * L_w) {
+          dmE <- yEX * Jx / (Mvdensity_w * L_w^3) - v_w * mE / L_w
+          dL_w <- 0
+          if (L_w >= Lp_w) {
+            Jcr <- kappar * (Mvdensity_w * L_w^3 * (mE * v_w / L_w - jEM) - kJ * Ehp / mu_E)
+            if (Jcr < 0) {
+              cat("Animal is starving; Gonads are resorbed for maturity maintenance\n")
+              cat("Discuss with Roger or Erik if this happens frequently\n")
+              if (MR < 0) {
+                cat("WARNING: maturity maintenance is not fully paid\n")
+                cat("Results not reliable after this point\n")
+                Jcr <- 0
+              }
+              }
+            } else {
+              Jcr <- 0
+              if (Mvdensity_w * L_w^3 * (mE * v_w / L_w - jEM) < kJ * Ehp / mu_E) {
+                cat("WARNING: Juvenile may not mature properly\n")
+                cat("Results may not be reliable\n")
+                cat("Code needs to be changed to include maturation dynamics\n")
+                cat("See Roger or Erik\n")
+              }
+              }
+          } else {
+            dL_w <- 0
+            Jcr <- 0
+            if (L_w >= Lp_w) {
+              if (MR > 0) {
+                dmE <- yEX * Jx / (Mvdensity_w * L_w^3) - v_w * mE / L_w
+                Jcr <- Mvdensity_w * L_w^3 * (v_w * mE / L_w - jEM) - kJ * Ehp / mu_E
+                cat("Animal is starving; gonad resorption for maintenance\n")
+                cat("See Roger or Erik\n")
+                } else {
+                  dmE <- yEX * Jx / (Mvdensity_w * L_w^3) - jEM
+                  cat("Animal is starving; extra reserve mobilization to pay somatic maintenance\n")
+                  cat("This is a debatable choice; Standard DEB prescribes death\n")
+                  cat("See Erik or Roger\n")
+                  if (ME < 0) {
+                    dmE <- 0
+                    cat("Animal starved to death\n")
+                  }
+                  }
+              } else {
+                dmE <- yEX * Jx / (Mvdensity_w * L_w^3) - jEM
+                cat("Animal is starving; extra reserve mobilization to pay somatic maintenance\n")
+                cat("This is a debatable choice; Standard DEB prescribes death\n")
+                cat("See Erik or Roger\n")
+                if (ME < 0) {
+                  dmE <- 0
+                  cat("Animal starved to death\n")
+                }
+              }
+          }
+        }
+    dn <- 0 # currently no mortality; Alternative: dn <- -0.0005 * n * (1 - (L_w / 12))
+  # calculation: 15% annual mortality rate (FAO); .15/300 = (probability of death/day);
+  # logistically size-dependent.
+  
+    output <- c(dmE, dL_w, Jcr, dF, dn)
+    return(output)
+    }
+
+  ##########################################################################
+  ##########################################################################
+  
+  # ODE Solver
+  options <- c(atol = 1e-7, rtol = 1e-7)
+  sol <- pracma::ode23s(y0 = Init, times = Time, func = mussel_derivative, h = NULL, atol = options$abstol, rtol = options$reltol)
+  
+  # Derived Values (weights of product)
+  deltam <- 0.1989  # aspect ratio; see notes on size measures
+  Mvdensity <- 0.0041841  # density of structure molC/cm3
+  Mvdensity_w <- Mvdensity * deltam^3
+  LW <- sol$y[, 2]  # apical length of an individual mussel (cm)
+  MV <- 12 * Mvdensity_w * LW^3  # structural biomass of an individual mussel (gC)
+  ME <- 12 * Mvdensity_w * sol$y[, 1] * LW^3  # reserve biomass of an individual mussel (gC)
+  MR <- 12 * sol$y[, 3]  # reproductive biomass of an individual mussel (gC)
+  M <- MV + ME + MR  # total biomass of an individual mussel (gC)
+  Indiv <- sol$y[, 5]
+  C_content <- 0.034  # Carbon weight/wet weight; Haamer, J. 1996.
+                     # Improving water quality in a eutrophied fjord system with mussel
+                     # farming. Ambio. Vol. 25. pp. 356-362.
+  TM <- Indiv * M / (1000 * C_content)  # total biomass of all mussels on the farm (kg)
+  Mwet <- M / C_content  # wet weight of individual mussel (g)
+  
+  # Available Food
+  Fdens <- sol$y[, 4] * 12e9  # in mgC/m3
+  # Calculation: X (molC/cm3) / [(1molC/12000mgC) * (1m3/1000000cm3)]
+  
+  # Functional Response
+  Fh <- 1.21e-8
+  f <- sol$y[, 4] / (Fh + sol$y[, 4])  # scaled functional response
+  
+  # Physical Conditions
+  Temperature <- approx(x = Time, y = Temps, xout = sol$x, method = "linear")$y - 273  # Temperature in degrees C
+  MixedLayerDepth <- approx(x = Time, y = mlds, xout = sol$x, method = "linear")$y  # Mixed layer depth in meters
+  F_Ambient <- approx(x = Time, y = Fs, xout = sol$x, method = "linear")$y * 12e9  # Ambient POC concentration in mgC/m3
+  CurrentSpeed <- approx(x = Time, y = Vs / 86400, xout = sol$x, method = "linear")$y  # Current speed in cm/s
+  
+  return(list(T = sol$x, TM = TM, Indiv = Indiv, MV = MV, ME = ME, MR = MR, M = M, Mwet = Mwet, LW = LW, Fdens = Fdens, F_Ambient = F_Ambient, f = f, Temperature = Temperature, MixedLayerDepth = MixedLayerDepth, CurrentSpeed = CurrentSpeed))
+}
+
+```
+
+
+```{r}
+# Lookup Table ONLY
+
+yield <- rep(0, length(celldata))
+Wets <- matrix(NA, nrow = length(celldata), ncol = harvestcycle + 2)
+ProblemCells <- matrix(0, nrow = nrow(celldata), ncol = 2)
+  
+for (i in 1:length(yield)) {
+  tic()
+  out <- mussel_odeSolve(i, celldata, days)
+  TM <- out[[2]]
+  Mwet <- out[[8]]
+    
+  yield[i] <- TM[length(TM)]
+  Wets[i, 1:length(Mwet)] <- Mwet
+    
+  ProblemCells[i, 1] <- i
+  if (length(TM) < harvestcycle + 2) {
+    ProblemCells[i, 2] <- 1
+  }
+    
+  toc()
+}
+  
+# save(ProblemCells, file = "ProblemCells.RData")
+  lookuptable <- cbind(celldata[, 1:4], yield, yield / 1000)
+  # save(lookuptable, file = "Yield.RData")
+
+```
+
+
+```{r, eval=FALSE, include=FALSE}
+# Lookup Table or Single Cell
+### THIS CODE IS BUGGY ###
+Ans0 <- readline("Create look-up table (T) or evaluate single cell (S)? (T/S)\n")
+assertthat::assert_that(Ans0 %in% c("T", "S", na.rm = TRUE), "Please enter 'T' or 'S'")
+
+tic()
+
+# Lookup Table
+if (Ans0 == "T") {
+  yield <- rep(0, length(celldata))
+  Wets <- matrix(NA, nrow = length(celldata), ncol = harvestcycle + 2)
+  ProblemCells <- matrix(0, nrow = nrow(celldata), ncol = 2)
+  
+  for (i in 1:length(yield)) {
+    tic()
+    out <- mussel_odeSolve(i, celldata, days)
+    TM <- out[[2]]
+    Mwet <- out[[8]]
+    
+    yield[i] <- TM[length(TM)]
+    Wets[i, 1:length(Mwet)] <- Mwet
+    
+    ProblemCells[i, 1] <- i
+    if (length(TM) < harvestcycle + 2) {
+      ProblemCells[i, 2] <- 1
+    }
+    
+    toc()
+  }
+  
+  #save(ProblemCells, file = "ProblemCells.RData")
+  lookuptable <- cbind(celldata[, 1:4], yield, yield / 1000)
+  #save(lookuptable, file = "Yield.RData")
+  
+} else {
+  toc()
+  # Single Cell
+  cellno <- as.integer(readline("Choose a cell (1-1134)\n"))
+  assertthat::assert_that(cellno >= 1 && cellno <= nrow(celldata), na.rm = TRUE, "Please enter a number between 1 and 1134")
+  tic()
+  
+  out <- mussel_odeSolve(cellno, celldata, days)
+  T <- out[[1]]
+  TM <- out[[2]]
+  Mwet <- out[[8]]
+  
+  outputs <- cbind(T, Mwet, out[[6]], out[[12]], out[[13]], out[[7]], TM)
+  toc()
+  
+  # Plots
+  # Ans2 <- readline("Plot results? (Y/N)\n")
+  # assertthat::assert_that(Ans2 %in% c("Y", "N"), "Please enter 'Y' or 'N'")
+  # if (Ans2 == "Y") {
+  #   musselplot(T, TM, out[[13]], Mwet, out[[6]], out[[7]], out[[12]], out[[11]], out[[14]])
+  # }
+}
+
+```
+
+
