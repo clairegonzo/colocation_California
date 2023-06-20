@@ -28,7 +28,7 @@ library(terra) # updated verson of raster package
 
 First need to reformat the csv to be able to put it into python and get physical data
 
-```{r}
+```{r, eval=FALSE, include=FALSE}
 #reading in csv, making it long form data and writing csv to export that new format of the data
 
 sites <- read_csv(here("data", "bivalve_model", "poc_data", "test3.csv")) %>% 
