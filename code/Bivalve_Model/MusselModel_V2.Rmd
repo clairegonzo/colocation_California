@@ -39,7 +39,6 @@ Maybe I am wrong in that assumption? But, it seems to me that `mussel_derivative
 
 Ultimately, I also think we could change the `pracma::interp1()` to `pracma::pchip()` to interpolate these values in a different way. But, I am unclear on what to put in the place of `T`. What am I missing here?
 
-I hope this wasn't too long-winded! Thank you for any help you can provide!
 
 
 ```{r}
