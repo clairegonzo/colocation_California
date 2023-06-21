@@ -14,18 +14,41 @@ knitr::opts_chunk$set(
 
 library(tidyverse)
 library(here)
-library(paletteer)
+#library(paletteer)
 library(ggplot2)
 library(pracma)
 library(assertthat)
 
 ```
 
+# Model Description
+This is my second attempt to convert the bivalve mussel model into R code. This code is in 4 parts:
+- Mussel Model Execute pt. 1
+- Mussel ODE Solve function (a function that we write)
+- Mussel Derivative function (a function that we write)
+- Mussel Model Execute pt. 2
+
+The Mussel Model Execute sections are what needs to be ran to actually create the results. The ODE solve function is used in the Mussel Model Execute code to calculate the results. The Mussel Derivative (nested in the ODE solve function) is a function that we create and plug in the the ODE solve function. Mussel Derivative is the function. ODE is a way for R to solve that equation for us.
+
+Mussel Model Execute pt. 1 sets up everything that we need for the model (calls in data, etc), then I added in the functions, then Mussel Model Execute pt. 2 will actually create the table of results given those equations. There is an option to also get information about a single cell (submit a location query), but I am ignoring that for now and you'll notice that code chunk is given `eval = FALSE` because it was throwing some aesthetic errors that I just don't think we need to worry about right now.
+
+# The Problem
+I believe that my problem here lies in the use of the functions. Maybe I don't need to have them physically nested in one another for R to be able to work with them? But my current error and the crux of my question is in lines 184-191. This is in the Mussel Derivative function, which is in the Mussel ODE solve function. These lines of code are interpolating our physical data so that is can be used in the mussel derivative. Previously, we have interpolated the physical data from monthly values to get daily values for the study period (so, taking 18 values and expanding it to 547 values). I ~believe~ we are now taking those 547 values and interpolating to get the physical data that would be needed for a harvest cycle (367 days). But in doing so, it calls for a variable `T` to act as "xi = Numeric vector; points at which to compute the interpolation; all points must lie between min(x) and max(x)" [documentation on this function from: https://www.rdocumentation.org/packages/pracma/versions/1.9.9/topics/interp1]. But, as far as I can tell we do not know what T is yet. It seems like it is solved for in the outer loop of the ODE solve function (line 350).
+
+Maybe I am wrong in that assumption? But, it seems to me that `mussel_derivative` is needed to solved for `mussel_odeSolve`, but `mussel_odeSolve` requires an output from `mussel_derivative` to be solved. How could this be?
+
+Ultimately, I also think we could change the `pracma::interp1()` to `pracma::pchip()` to interpolate these values in a different way. But, I am unclear on what to put in the place of `T`. What am I missing here?
+
+I hope this wasn't too long-winded! Thank you for any help you can provide!
+
+
 ```{r}
 # Mussel Model Execute
 
 # Import data
 celldata <- read.csv(here("data", "bivalve_model", "celldata4.csv"), header = FALSE)
+# Look at data to make sure that there are no headers being used here.
+## Dimensions should be 3442 rows & 75 columns (sites numbers in column 1)
 
 # Create Time variable
 year_Oct2Mar <- seq(as.Date("2014-10-01"), as.Date("2016-03-31"), by = "day")  # Harvest period range: 10/14 - 03/2016
@@ -164,7 +187,7 @@ mussel_odeSolve <- function(cellno, celldata, days) {
   # Interpolate using cubic spline
     #~#~#~##~############ ERROR HERE #################~#~##~#~#
     # why do we even need to reintorpolate these values???? #
-    Temp <- pracma::interp1(Time, Temps, T, method = "cubic") #consider using approx() instead of interp1()
+    Temp <- pracma::interp1(Time, Temps, T, method = "cubic") #consider using approx() or pchip() instead of interp1()
     V <- pracma::interp1(Time, Vs, T, method = "cubic")
     mld <- pracma::interp1(Time, mlds, T, method = "cubic") 
     F_in <- pracma::interp1(Time, Fs, T, method = "cubic")
