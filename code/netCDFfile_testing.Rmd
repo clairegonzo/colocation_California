@@ -1,5 +1,5 @@
 ---
-title: "POC timeseries"
+title: "Physical data timeseries"
 author: 'By: Claire Gonzales'
 date: "2023-04-21"
 output: html_document
@@ -366,7 +366,7 @@ for(i in 1:length(curvel_files)){
     
     ## create vector with all the extracted metrics from all the coordinates 1:nrow(sites)
     ## this vector is one month of data for all 5,000 site locations ##
-    holding[j,i] <-  extract_metric$u
+    holding[j,i] <-  extract_metric$v
     
   }
   colname = curvel_files[i] %>% str_split(pattern = "_") %>% unlist()
@@ -486,8 +486,8 @@ data_mixsst <- data.frame(
 )
 
 # data_curvel <- data.frame(
-#   merge(matrix_curvel_zonal, matrix_curvel_meridional, by = c("sites_lon", "sites_lat"))
-# )
+#   merge(matrix_curvel_zonal, matrix_curvel_meridional, by = c("sites_lon", "sites_lat")) %>%
+#     )
 
 data_curvelpoc <- data.frame(
   merge(data_curvel, matrix_poc, by = c("sites_lon", "sites_lat"))
