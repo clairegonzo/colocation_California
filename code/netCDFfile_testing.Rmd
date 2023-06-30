@@ -24,6 +24,7 @@ library(sp)
 library(raster) # package for raster manipulation (will be retired Oct 2023)
 library(rgdal) # package for geospatial analysis
 library(terra) # updated verson of raster package
+library(backports) # for startsWith()
 ```
 
 First need to reformat the csv to be able to put it into python and get physical data
@@ -247,7 +248,7 @@ setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 
 # Current veloicty
 ```{r, eval=FALSE}
-ncfile_current <- nc_open( here("data", "bivalve_model","data_NetCDF", "OSCAR_L4_OC_FINAL_V2.0",  "oscar_currents_final_20141001.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+ncfile_current <- nc_open(here("data", "bivalve_model","data_NetCDF", "OSCAR_L4_OC_FINAL_V2.0",  "oscar_currents_final_20141001.nc"))
 
 print(ncfile_current)
 
@@ -362,7 +363,7 @@ for(i in 1:length(curvel_files)){
     temp_lon <- sites_lon[j]
     temp_lat <- sites_lat[j]
     
-    extract_metric <- terra::extract(r[names(r)[1]], vect(cbind(temp_lon, temp_lat), crs="+proj=longlat +datum=WGS84"), method="simple", cells=FALSE, xy=FALSE)
+    extract_metric <- terra::extract(r[names(r)[3]], vect(cbind(temp_lon, temp_lat), crs="+proj=longlat +datum=WGS84"), method="simple", cells=FALSE, xy=FALSE)
     
     ## create vector with all the extracted metrics from all the coordinates 1:nrow(sites)
     ## this vector is one month of data for all 5,000 site locations ##
@@ -449,27 +450,89 @@ setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 ##wrangling current velocity data
 ```{r}
 
+names <- colnames(matrix_curvel_zonal)
+
+vector550 <- c(1:550)
+
+table_names <- cbind(names, vector550)
+
+oct14 <- matrix_curvel_zonal %>% 
+  dplyr::select(3:33)
+
+nov14 <- matrix_curvel_zonal %>% 
+  dplyr::select(34:63)
+
+dec14 <- matrix_curvel_zonal %>% 
+  dplyr::select(64:94)
+
+jan15 <- matrix_curvel_zonal %>% 
+  dplyr::select(95:125)
+
+feb15 <- matrix_curvel_zonal %>% 
+  dplyr::select(126:153)
+
+mar15 <- matrix_curvel_zonal %>% 
+  dplyr::select(154:184)
+
+ap15 <- matrix_curvel_zonal %>% 
+  dplyr::select(185:214)
+
+may15 <- matrix_curvel_zonal %>% 
+  dplyr::select(215:245)
+
+jun15 <- matrix_curvel_zonal %>% 
+  dplyr::select(246:275)
+
+jul15 <- matrix_curvel_zonal %>% 
+  dplyr::select(276:306)
+
+aug15 <- matrix_curvel_zonal %>% 
+  dplyr::select(307:337)
+
+sep15 <- matrix_curvel_zonal %>% 
+  dplyr::select(338:367)
+
+oct15 <- matrix_curvel_zonal %>% 
+  dplyr::select(368:398)
+
+nov15 <- matrix_curvel_zonal %>% 
+  dplyr::select(399:428)
+
+dec15 <- matrix_curvel_zonal %>% 
+  dplyr::select(429:459)
+
+jan16 <- matrix_curvel_zonal %>% 
+  dplyr::select(460:490)
+
+feb16 <- matrix_curvel_zonal %>% 
+  dplyr::select(491:519)
+
+mar16 <- matrix_curvel_zonal %>% 
+  dplyr::select(520:550)
+
+### Add the mean to each subset and then cbind all the means together ###
+
 matrix_curvel_zonal_ave <- matrix_curvel_zonal %>% 
-  mutate(
-    X201410_ave = mean(select(matrix_curvel_zonal, starts_with("X201410"))),
-    X201411_ave = mean(select(matrix_curvel_zonal, starts_with("X201411"))),
-    X201412_ave = mean(select(matrix_curvel_zonal, starts_with("X201412"))),
-    X201501_ave = mean(select(matrix_curvel_zonal, starts_with("X201501"))),
-    X201502_ave = mean(select(matrix_curvel_zonal, starts_with("X201502"))),
-    X201503_ave = mean(select(matrix_curvel_zonal, starts_with("X201503"))),
-    X201504_ave = mean(select(matrix_curvel_zonal, starts_with("X201504"))),
-    X201505_ave = mean(select(matrix_curvel_zonal, starts_with("X201505"))),
-    X201506_ave = mean(select(matrix_curvel_zonal, starts_with("X201506"))),
-    X201507_ave = mean(select(matrix_curvel_zonal, starts_with("X201507"))),
-    X201508_ave = mean(select(matrix_curvel_zonal, starts_with("X201508"))),
-    X201509_ave = mean(select(matrix_curvel_zonal, starts_with("X201509"))),
-    X201510_ave = mean(select(matrix_curvel_zonal, starts_with("X201510"))),
-    X201511_ave = mean(select(matrix_curvel_zonal, starts_with("X201511"))),
-    X201512_ave = mean(select(matrix_curvel_zonal, starts_with("X201512"))),
-    X201601_ave = mean(select(matrix_curvel_zonal, starts_with("X201601"))),
-    X201602_ave = mean(select(matrix_curvel_zonal, starts_with("X201602"))),
-    X201603_ave = mean(select(matrix_curvel_zonal, starts_with("X201603"))),
-                            )
+  dplyr::summarize(
+    X201410_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201410")), na.rm = TRUE),
+    X201411_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201411")), na.rm = TRUE),
+    X201412_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201412")), na.rm = TRUE),
+    X201501_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201501")), na.rm = TRUE),
+    X201502_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201502")), na.rm = TRUE),
+    X201503_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201503")), na.rm = TRUE),
+    X201504_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201504")), na.rm = TRUE),
+    X201505_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201505")), na.rm = TRUE),
+    X201506_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201506")), na.rm = TRUE),
+    X201507_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201507")), na.rm = TRUE),
+    X201508_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201508")), na.rm = TRUE),
+    X201509_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201509")), na.rm = TRUE),
+    X201510_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201510")), na.rm = TRUE),
+    X201511_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201511")), na.rm = TRUE),
+    X201512_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201512")), na.rm = TRUE),
+    X201601_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201601")), na.rm = TRUE),
+    X201602_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201602")), na.rm = TRUE),
+    X201603_ave = mean(dplyr::select(matrix_curvel_zonal, starts_with("X201603")), na.rm = TRUE)
+    ) 
 
 # data_curvel <- data.frame(
 #   merge(matrix_curvel_zonal, matrix_curvel_meridional, by = c("sites_lon", "sites_lat"))
@@ -485,9 +548,13 @@ data_mixsst <- data.frame(
   merge(matrix_mix, matrix_sst, by = c("sites_lon", "sites_lat"))
 )
 
-# data_curvel <- data.frame(
-#   merge(matrix_curvel_zonal, matrix_curvel_meridional, by = c("sites_lon", "sites_lat")) %>%
-#     )
+#### Code to wrangle daily data and make it monthly data ####
+### must also use pathagorean theorem for reconciling velocities ###
+##########################################################################
+data_curvel <- data.frame(
+  merge(matrix_curvel_zonal, matrix_curvel_meridional, by = c("sites_lon", "sites_lat")) %>% 
+    mutate()
+  )
 
 data_curvelpoc <- data.frame(
   merge(data_curvel, matrix_poc, by = c("sites_lon", "sites_lat"))
