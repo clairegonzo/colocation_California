@@ -450,6 +450,13 @@ setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 ##wrangling current velocity data
 ```{r}
 
+## Attempting to pivot longer and then group by and summarize/mean ##
+
+long_matrix_curvel_zonal <- matrix_curvel_zonal %>% 
+  pivot_longer(cols = starts_with("X20"), names_to = "day", values_to = "velocity")
+
+#####################################################################
+
 names <- colnames(matrix_curvel_zonal)
 
 vector550 <- c(1:550)
@@ -457,8 +464,11 @@ vector550 <- c(1:550)
 table_names <- cbind(names, vector550)
 
 oct14 <- matrix_curvel_zonal %>% 
-  dplyr::select(3:33)
+  dplyr::select(3:33) %>% 
+  mutate(oct14_mean = mean(1:31)) %>% 
+  rowMeans()
 
+##PICK UP HERE##
 nov14 <- matrix_curvel_zonal %>% 
   dplyr::select(34:63)
 
