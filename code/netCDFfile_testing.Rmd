@@ -491,10 +491,9 @@ meridional_curvel_bind <- cbind(long_matrix_curvel_meridional, months) %>%
 # Use a^2+b^2 = c^2
 
 curvel_merged <- base::merge(zonal_curvel_bind, meridional_curvel_bind, by = c("sites_lon", "sites_lat", "months")) %>% 
-  pivot_longer(cols = starts_with("vel_"), names_to = "velocity_type", values_to = "velocity") %>% 
-  # maybe we don't use group_by at all? Maybe just mutate? # And maybe dont need pivot_longer for that?
-  group_by(sites_lon, sites_lat, months, velocity_type) %>% 
-  summarize()
+  mutate(total_curvel = sqrt((vel_monthly_zon)^2 + (vel_monthly_mer)^2)) %>% 
+  select(sites_lon, sites_lat, months, total_curvel) %>% # only selecting the resolved currents
+  pivot_wider(names_from = months, values_from = total_curvel) # organizing the data like the other data frames
 
 
 ```
@@ -515,28 +514,29 @@ data_mixsst <- data.frame(
 #   )
 
 data_curvelpoc <- data.frame(
-  base::merge(data_curvel, matrix_poc, by = c("sites_lon", "sites_lat"))
+  base::merge(curvel_merged, matrix_poc, by = c("sites_lon", "sites_lat"))
 )
 
 alldata <- data.frame(
-  base::merge(data_mixsst, data_curvelpoc, by = c("sites_lon", "sites_lat"))
-)
+  base::merge(data_mixsst, data_curvelpoc, by = c("sites_lon", "sites_lat"))) %>% 
+  na.omit()# removing lines with any NAs in any columns
 ```
 
 ## write csv of all data dataframe
 
 ```{r}
-#write.csv(alldata, here("data", "alldata_forbivalvemodel.csv"))
+write.csv(alldata, here("data", "alldata_forbivalvemodel1.csv"))
+#remove column names after this (should've done it before writing)
 ```
 
 ## writing in new csv of the data
 This data frame has been adjusted to make the daily current velocity data a monthly average
 
 ```{r, eval=FALSE}
-new_data <- read.csv(here("data", "bivalve_model", "celldata3.csv"), header = FALSE) %>% 
-  na.omit() %>% # removing lines with any NAs in any columns
-  dplyr::select(!1) 
-
-write.csv(new_data, here("data", "celldata4.csv"), col.names = F)
+# new_data <- read.csv(here("data", "bivalve_model", "celldata3.csv"), header = FALSE) %>% 
+#   na.omit() %>% # removing lines with any NAs in any columns
+#   dplyr::select(!1) 
+# 
+# write.csv(new_data, here("data", "celldata4.csv"), col.names = F)
 ```
 
