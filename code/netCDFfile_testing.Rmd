@@ -86,9 +86,72 @@ attributes(ncfile_mix$dim)
 ## "latitude" and "longitude"
 ```
 
+#New Mixed Layer Depth Files??
+```{r}
+
+## looking at the data
+ncfile_mix_v2 <- here("data", "bivalve_model","data_NetCDF", "OCEAN_MIXED_LAYER_DEPTH_mon_mean_2014-10_ECCO_V4r4_native_llc0090.nc")
+
+nc_open(ncfile_mix_v2, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
+
+attributes(nc_open(ncfile_mix_v2)$var)
+attributes(nc_open(ncfile_mix_v2)$dim)
+
+
+r <- brick(ncfile_mix_v2, varname = "MXLDEPTH")
+
+# holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = 1))
+# 
+# for(j in 1:nrow(sites)){
+#     
+#   temp_lon <- sites_lon[j]
+#   temp_lat <- sites_lat[j]
+#   
+#   extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+#   
+#   holding[j] <-  extract_metric
+# }
+# 
+
+raster::plot(r)
+
+nc_close(nc_open(ncfile_mix_v2))
+```
+
+```{r}
+## looking at the data
+ncfile_mix_v3 <- here("data", "bivalve_model","data_NetCDF", "mercatorglorys12v1_gl12_mean_201410.nc")
+
+nc_open(ncfile_mix_v3, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
+
+attributes(nc_open(ncfile_mix_v3)$var)
+attributes(nc_open(ncfile_mix_v3)$dim)
+
+
+
+r <- brick(ncfile_mix_v3, varname = "mlotst")
+
+# holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = 1))
+# 
+# for(j in 1:nrow(sites)){
+#     
+#   temp_lon <- sites_lon[j]
+#   temp_lat <- sites_lat[j]
+#   
+#   extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+#   
+#   holding[j] <-  extract_metric
+# }
+
+raster::plot(r, xlim = limx, ylim = limy)
+
+nc_close(nc_open(ncfile_mix_v3))
+```
+
+
 ## Reading in files 
 ```{r}
-mix_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/ECCO_L4_MIXED_LAYER_DEPTH_05DEG_MONTHLY_V4R4", pattern = "*.nc")
+mix_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/curvel", pattern = "*.nc")
 
 ```
 
@@ -124,7 +187,7 @@ Trying to for loop() through data to first gather metrics for each site (nested 
 ```{r}
 
 # setting wd to our data file so that R can find everything
-setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/ECCO_L4_MIXED_LAYER_DEPTH_05DEG_MONTHLY_V4R4")
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/curvel")
 
 # create a holding vector/matrix
 # this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
@@ -139,7 +202,7 @@ for(i in 1:length(mix_files)){
   nc_open(file, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
   
   
-  r <- brick(file, varname = "MXLDEPTH")
+  r <- brick(file, varname = "mlotst")
   
   
   #nested for loop to extract data for each coordinate
@@ -156,7 +219,7 @@ for(i in 1:length(mix_files)){
     
   }
   colname = mix_files[i] %>% str_split(pattern = "_") %>% unlist()
-  colnames(holding)[i] = colname[7]
+  colnames(holding)[i] = colname[4]
      
   nc_close(nc_open(file))
 }
@@ -169,7 +232,7 @@ setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 
 
 
-# Surface temperature
+# Sea Surface temperature
 ```{r, include=FALSE, eval=FALSE}
 # Example to get an idea of how the for loop() should look
 ncfile_sst <- here("data", "bivalve_model","data_NetCDF", "OceanColor_SST",  "AQUA_MODIS.20141001_20141031.L3m.MO.SST.sst.4km.nc")
@@ -492,7 +555,7 @@ meridional_curvel_bind <- cbind(long_matrix_curvel_meridional, months) %>%
 
 curvel_merged <- base::merge(zonal_curvel_bind, meridional_curvel_bind, by = c("sites_lon", "sites_lat", "months")) %>% 
   mutate(total_curvel = sqrt((vel_monthly_zon)^2 + (vel_monthly_mer)^2)) %>% 
-  select(sites_lon, sites_lat, months, total_curvel) %>% # only selecting the resolved currents
+  dplyr::select(sites_lon, sites_lat, months, total_curvel) %>% # only selecting the resolved currents
   pivot_wider(names_from = months, values_from = total_curvel) # organizing the data like the other data frames
 
 
@@ -519,13 +582,13 @@ data_curvelpoc <- data.frame(
 
 alldata <- data.frame(
   base::merge(data_mixsst, data_curvelpoc, by = c("sites_lon", "sites_lat"))) %>% 
-  na.omit()# removing lines with any NAs in any columns
+  #na.omit() # removing lines with any NAs in any columns
 ```
 
 ## write csv of all data dataframe
 
 ```{r}
-write.csv(alldata, here("data", "alldata_forbivalvemodel1.csv"))
+#write.csv(alldata, here("data", "alldata_forbivalvemodel1.csv"))
 #remove column names after this (should've done it before writing)
 ```
 
