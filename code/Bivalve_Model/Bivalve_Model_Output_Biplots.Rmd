@@ -1,0 +1,34 @@
+---
+title: "Bivalve Model Output BiPlotting"
+author: 'By: Claire Gonzales'
+date: "2023-07-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+
+library(tidyverse)
+library(here)
+library(paletteer)
+library(ggplot2)
+```
+
+## Read in Data
+```{r}
+metrics <- read_csv(here("data", "alldata_forbivalvemodel2.csv"))
+
+bivalve <- read_csv(here("data", "LookUpTable.csv"), col_names = FALSE)
+
+bivalves <- rename(bivalve, site_no = X1,
+       lon = X2,
+       lat = X3,
+       yield = X4,
+       yield_1000 = X5)
+```
+
