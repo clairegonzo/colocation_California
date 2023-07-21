@@ -17,18 +17,63 @@ library(tidyverse)
 library(here)
 library(paletteer)
 library(ggplot2)
+library(cowplot)
 ```
 
 ## Read in Data
 ```{r}
-metrics <- read_csv(here("data", "alldata_forbivalvemodel2.csv"))
+metrics <- read_csv(here("data", "alldata_forbivalvemodel2_means.csv")) %>% 
+  na.omit()
+#I created the 18-month means of physical metric inputs in excel before reading this csv in
 
 bivalve <- read_csv(here("data", "LookUpTable.csv"), col_names = FALSE)
 
 bivalves <- rename(bivalve, site_no = X1,
-       lon = X2,
-       lat = X3,
+       sites_lon = X2,
+       sites_lat = X3,
        yield = X4,
        yield_1000 = X5)
+
+all_data <- merge(metrics, bivalves, by = c("sites_lon", "sites_lat"))
+
 ```
+
+## MLD vs output
+```{r}
+mld <- ggplot(data = all_data, aes(x = mld_ave, y = yield)) +
+  geom_point(color="grey", fill="grey") +
+  geom_smooth(method = "lm", se = TRUE) +
+  theme_minimal()
+```
+
+## SST vs output
+```{r}
+sst <- ggplot(data = all_data, aes(x = sst_ave, y = yield)) +
+  geom_point(color="grey", fill="grey") +
+  geom_smooth(method = "lm", se = TRUE) +
+  theme_minimal()
+```
+
+## CurVel vs output
+```{r}
+curvel <- ggplot(data = all_data, aes(x = curvel_ave, y = yield)) +
+  geom_point(color="grey", fill="grey") +
+  geom_smooth(method = "lm", se = TRUE) +
+  theme_minimal()
+```
+
+## POC vs output
+```{r}
+poc <- ggplot(data = all_data, aes(x = poc_ave, y = yield)) +
+  geom_point(color="grey", fill="grey") +
+  geom_smooth(method = "lm", se = TRUE) +
+  ylim(c(2.5e+06,1.5e+07)) +
+  theme_minimal()
+```
+
+## Grid of plots
+```{r}
+plot_grid(mld, sst, curvel, poc)
+```
+
 
