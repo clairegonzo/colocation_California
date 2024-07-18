@@ -40,19 +40,10 @@ sites_lon <- as.numeric(sites$longitude)
 
 ```
 
-
-```{r}
-# some example code that will help fugure out the forloop 
-# ncfile_1 <- nc_open( here("data", "bivalve_model","poc_data",  "AQUA_MODIS.20160301_20160331.L3m.MO.POC.poc.4km.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
-# 
-# attributes(ncfile_1$var)
-# attributes(ncfile_1$dim)
-```
-
 #################### Wrangling NetCDF Files ####################
 
 # Mixed layer depth
-```{r}
+```{r, eval=FALSE}
 ## looking at the data
 ncfile_mix <- nc_open( here("data", "bivalve_model","data_NetCDF", "mld","preblob",  "mercatorglorys12v1_gl12_mean_201210.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
 
@@ -61,110 +52,18 @@ attributes(ncfile_mix$dim)
 
 ## lat and long names:
 ## "latitude" and "longitude"
-```
 
-#New Mixed Layer Depth Files??
-```{r}
-
-## looking at the data
-ncfile_mix_v2 <- here("data", "bivalve_model","data_NetCDF", "OCEAN_MIXED_LAYER_DEPTH_mon_mean_2014-10_ECCO_V4r4_native_llc0090.nc")
-
-nc_open(ncfile_mix_v2, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
-
-attributes(nc_open(ncfile_mix_v2)$var)
-attributes(nc_open(ncfile_mix_v2)$dim)
-
-
-r <- brick(ncfile_mix_v2, varname = "MXLDEPTH")
-
-# holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = 1))
-# 
-# for(j in 1:nrow(sites)){
-#     
-#   temp_lon <- sites_lon[j]
-#   temp_lat <- sites_lat[j]
-#   
-#   extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
-#   
-#   holding[j] <-  extract_metric
-# }
-# 
-
-raster::plot(r)
-
-nc_close(nc_open(ncfile_mix_v2))
-```
-
-```{r}
-## looking at the data
-ncfile_mix_v3 <- here("data", "bivalve_model","data_NetCDF", "mercatorglorys12v1_gl12_mean_201410.nc")
-
-nc_open(ncfile_mix_v3, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
-
-attributes(nc_open(ncfile_mix_v3)$var)
-attributes(nc_open(ncfile_mix_v3)$dim)
-
-
-
-r <- brick(ncfile_mix_v3, varname = "mlotst")
-
-# holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = 1))
-# 
-# for(j in 1:nrow(sites)){
-#     
-#   temp_lon <- sites_lon[j]
-#   temp_lat <- sites_lat[j]
-#   
-#   extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
-#   
-#   holding[j] <-  extract_metric
-# }
-
-raster::plot(r, xlim = limx, ylim = limy)
-
-nc_close(nc_open(ncfile_mix_v3))
-```
-
-
-## Reading in files 
-```{r}
-mix_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/mld", pattern = "*.nc")
-
+nc_close(ncfile_mix)
 ```
 
 # Organizing data frames (example file)
-```{r, eval=FALSE, include=FALSE}
-lat <- ncvar_get(ncfile_mix, "latitude")
-nlat <- dim(lat)
-
-lon <- ncvar_get(ncfile_mix, "longitude")
-nlon <- dim(lon) 
-
-lonlat <- as.matrix(expand.grid(lon, lat))
-
-
-mix_array <- ncvar_get(ncfile_mix, "MXLDEPTH")
-nmix <- dim(mix_array)
-
-mix_vec_long <- as.vector(mix_array)
-length(mix_vec_long)
-
-
-mix_obs <- data.frame(cbind(lonlat, mix_vec_long)) %>% #data in tidy format
-  rename("Long" = "Var1",
-         "Lat" = "Var2",
-         "Mixed_Layer_Depth" = "mix_vec_long")
-
-r <- rasterFromXYZ(mix_obs, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
-
-```
 
 Trying to for loop() through data to first gather metrics for each site (nested for loop()) and for each month (outer for loop())
 ## for looping through files
 ```{r}
 
 # setting wd to our data file so that R can find everything
-setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/curvel")
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/mld/preblob")
 
 # create a holding vector/matrix
 # this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
@@ -212,7 +111,7 @@ setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 # Sea Surface temperature
 ```{r, include=FALSE, eval=FALSE}
 # Example to get an idea of how the for loop() should look
-ncfile_sst <- here("data", "bivalve_model","data_NetCDF", "OceanColor_SST",  "AQUA_MODIS.20141001_20141031.L3m.MO.SST.sst.4km.nc")
+ncfile_sst <- here("data", "bivalve_model","data_NetCDF", "OceanColor_SST", "preblob","AQUA_MODIS.20121001_20121031.L3m.MO.SST.sst.4km.nc")
 
 nc_open(ncfile_sst, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
 
@@ -231,18 +130,20 @@ extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), m
 extract_metric
 ## lat and long names:
 ## "lat" and "lon"
+
+nc_close()
 ```
 
 ## Reading in files 
 ```{r}
-sst_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_SST", pattern = "*.nc")
+sst_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_SST/preblob", pattern = "*.nc")
 ```
 
 ## for looping through files
 ```{r}
 
 # setting wd to our data file so that R can find everything
-setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_SST")
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_SST/preblob")
 
 # create a holding vector/matrix
 # this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
