@@ -1,0 +1,582 @@
+---
+title: "Physical data timeseries"
+author: 'By: Claire Gonzales'
+date: "2024-07-18"
+output: html_document
+---
+
+I am redoing the bivalve model with data from before the blob. This rmd is to extract data from the NetCDF files and create a matrix with that information that can feed into the bivalve model. I want monthly averaged data with the sites on the y axis (as rows) and each of the 18 months on the x axis (as columns). I have data for 4 types of physical data. I am going to try and format them all the same way.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+
+library(tidyverse)
+library(here)
+library(paletteer)
+library(ggplot2)
+library(ncdf4)
+library(sp)
+library(raster) # package for raster manipulation (will be retired Oct 2023)
+library(rgdal) # package for geospatial analysis
+library(terra) # updated verson of raster package
+library(backports) # for startsWith()
+```
+
+First need to reformat the csv to be able to put it into python and get physical data
+
+
+```{r}
+# extracting locations for sites and creating vectors
+
+sites <- read.csv(here("data", "bivalve_model", "bivalvemodel_sites_5000pts_TableToExcel.csv"))
+
+sites_lat <- as.numeric(sites$latitude)
+sites_lon <- as.numeric(sites$longitude)
+
+```
+
+
+```{r}
+# some example code that will help fugure out the forloop 
+# ncfile_1 <- nc_open( here("data", "bivalve_model","poc_data",  "AQUA_MODIS.20160301_20160331.L3m.MO.POC.poc.4km.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+# 
+# attributes(ncfile_1$var)
+# attributes(ncfile_1$dim)
+```
+
+#################### Wrangling NetCDF Files ####################
+
+# Mixed layer depth
+```{r}
+## looking at the data
+ncfile_mix <- nc_open( here("data", "bivalve_model","data_NetCDF", "mld","preblob",  "mercatorglorys12v1_gl12_mean_201210.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+
+attributes(ncfile_mix$var)
+attributes(ncfile_mix$dim)
+
+## lat and long names:
+## "latitude" and "longitude"
+```
+
+#New Mixed Layer Depth Files??
+```{r}
+
+## looking at the data
+ncfile_mix_v2 <- here("data", "bivalve_model","data_NetCDF", "OCEAN_MIXED_LAYER_DEPTH_mon_mean_2014-10_ECCO_V4r4_native_llc0090.nc")
+
+nc_open(ncfile_mix_v2, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
+
+attributes(nc_open(ncfile_mix_v2)$var)
+attributes(nc_open(ncfile_mix_v2)$dim)
+
+
+r <- brick(ncfile_mix_v2, varname = "MXLDEPTH")
+
+# holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = 1))
+# 
+# for(j in 1:nrow(sites)){
+#     
+#   temp_lon <- sites_lon[j]
+#   temp_lat <- sites_lat[j]
+#   
+#   extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+#   
+#   holding[j] <-  extract_metric
+# }
+# 
+
+raster::plot(r)
+
+nc_close(nc_open(ncfile_mix_v2))
+```
+
+```{r}
+## looking at the data
+ncfile_mix_v3 <- here("data", "bivalve_model","data_NetCDF", "mercatorglorys12v1_gl12_mean_201410.nc")
+
+nc_open(ncfile_mix_v3, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
+
+attributes(nc_open(ncfile_mix_v3)$var)
+attributes(nc_open(ncfile_mix_v3)$dim)
+
+
+
+r <- brick(ncfile_mix_v3, varname = "mlotst")
+
+# holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = 1))
+# 
+# for(j in 1:nrow(sites)){
+#     
+#   temp_lon <- sites_lon[j]
+#   temp_lat <- sites_lat[j]
+#   
+#   extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+#   
+#   holding[j] <-  extract_metric
+# }
+
+raster::plot(r, xlim = limx, ylim = limy)
+
+nc_close(nc_open(ncfile_mix_v3))
+```
+
+
+## Reading in files 
+```{r}
+mix_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/mld", pattern = "*.nc")
+
+```
+
+# Organizing data frames (example file)
+```{r, eval=FALSE, include=FALSE}
+lat <- ncvar_get(ncfile_mix, "latitude")
+nlat <- dim(lat)
+
+lon <- ncvar_get(ncfile_mix, "longitude")
+nlon <- dim(lon) 
+
+lonlat <- as.matrix(expand.grid(lon, lat))
+
+
+mix_array <- ncvar_get(ncfile_mix, "MXLDEPTH")
+nmix <- dim(mix_array)
+
+mix_vec_long <- as.vector(mix_array)
+length(mix_vec_long)
+
+
+mix_obs <- data.frame(cbind(lonlat, mix_vec_long)) %>% #data in tidy format
+  rename("Long" = "Var1",
+         "Lat" = "Var2",
+         "Mixed_Layer_Depth" = "mix_vec_long")
+
+r <- rasterFromXYZ(mix_obs, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
+
+```
+
+Trying to for loop() through data to first gather metrics for each site (nested for loop()) and for each month (outer for loop())
+## for looping through files
+```{r}
+
+# setting wd to our data file so that R can find everything
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/curvel")
+
+# create a holding vector/matrix
+# this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
+holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = 18))
+
+#first for loop()
+for(i in 1:length(mix_files)){
+  
+  #open each file
+  file <- mix_files[i]
+  
+  nc_open(file, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
+  
+  
+  r <- brick(file, varname = "mlotst")
+  
+  
+  #nested for loop to extract data for each coordinate
+  for(j in 1:nrow(sites)){
+    
+    temp_lon <- sites_lon[j]
+    temp_lat <- sites_lat[j]
+    
+    extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+    
+    ## trying to create a vector with all the extracted metrics from all the coordinates 1:nrow(sites)
+    ## this vector is one month of data for all 5,000 site locations ##
+    holding[j,i] <-  extract_metric 
+    
+  }
+  colname = mix_files[i] %>% str_split(pattern = "_") %>% unlist()
+  colnames(holding)[i] = colname[4]
+     
+  nc_close(nc_open(file))
+}
+
+matrix_mix <- data.frame(cbind(sites_lon, sites_lat, holding))
+
+#resetting our wd to home
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
+```
+
+
+
+# Sea Surface temperature
+```{r, include=FALSE, eval=FALSE}
+# Example to get an idea of how the for loop() should look
+ncfile_sst <- here("data", "bivalve_model","data_NetCDF", "OceanColor_SST",  "AQUA_MODIS.20141001_20141031.L3m.MO.SST.sst.4km.nc")
+
+nc_open(ncfile_sst, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
+
+attributes(ncfile_sst$var)
+attributes(ncfile_sst$dim)
+
+print(ncfile_sst)
+
+r <- brick(ncfile_sst, varname = "sst")
+
+temp_lon <- sites_lon[1]
+temp_lat <- sites_lat[1]
+    
+extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+
+extract_metric
+## lat and long names:
+## "lat" and "lon"
+```
+
+## Reading in files 
+```{r}
+sst_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_SST", pattern = "*.nc")
+```
+
+## for looping through files
+```{r}
+
+# setting wd to our data file so that R can find everything
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_SST")
+
+# create a holding vector/matrix
+# this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
+holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = length(sst_files)))
+
+#first for loop()
+for(i in 1:length(sst_files)){
+  
+  #open each file
+  file <- sst_files[i]
+  
+  nc_open(file, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
+  
+  
+  r <- brick(file, varname = "sst")
+  
+  
+  #nested for loop to extract data for each coordinate
+  for(j in 1:nrow(sites)){
+    
+    temp_lon <- sites_lon[j]
+    temp_lat <- sites_lat[j]
+    
+    extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+    
+    ## trying to create a vector with all the extracted metrics from all the coordinates 1:nrow(sites)
+    ## this vector is one month of data for all 5,000 site locations ##
+    holding[j,i] <-  extract_metric 
+    
+  }
+  colname = sst_files[i] %>% str_split(pattern = "_") %>% unlist()
+  colnames(holding)[i] = colname[2]
+     
+  nc_close(nc_open(file))
+}
+
+matrix_sst <- data.frame(cbind(sites_lon, sites_lat, holding))
+
+#resetting our wd to home
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
+```
+
+
+# Current veloicty
+```{r, eval=FALSE}
+ncfile_current <- nc_open(here("data", "bivalve_model","data_NetCDF", "OSCAR_L4_OC_FINAL_V2.0",  "oscar_currents_final_20141001.nc"))
+
+print(ncfile_current)
+
+attributes(ncfile_current$var)
+attributes(ncfile_current$dim)
+
+r <- raster(ncfile_current, varname = "", crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
+
+## lat and long names:
+## "latitude" and "longitude"
+```
+
+## Reading in files 
+```{r}
+curvel_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OSCAR_L4_OC_FINAL_V2.0", pattern = "*.nc")
+```
+
+## ZONAL CURRENTS: for looping through files
+```{r}
+
+# setting wd to our data file so that R can find everything
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OSCAR_L4_OC_FINAL_V2.0")
+
+# create a holding vector/matrix
+# this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
+holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = length(curvel_files)))
+
+#first for loop()
+for(i in 1:length(curvel_files)){
+  
+  #open each file
+  file <- curvel_files[i]
+  nc_open(file)
+  
+  # file <- nc_open(curvel_files[i])
+  
+  # nc_open(file, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
+  
+  #pull the lat and lon variables from each nc file and create a long matrix of those coordinates
+  # lat <- ncvar_get(file, "lat")
+  # lon <- ncvar_get(file, "lon")
+  # lonlat <- as.matrix(expand.grid(lon, lat))
+  # #pull the mixed layer depth variable
+  # curvel_array <- ncvar_get(file, "u")
+  # 
+  # #turn that array into a vector
+  # curvel_vec_long <- as.vector(curvel_array)
+  # 
+  # #create a data frame of the lat, lon and mixed layer depth
+  # df <- data.frame(cbind(lonlat, curvel_vec_long)) %>% #data in tidy format
+  # rename("Long" = "Var1",
+  #        "Lat" = "Var2",
+  #        "Current_Velocity_Zonal" = "curvel_vec_long")
+  # 
+  # #turn this data frame into a raster
+  # r <- rasterFromXYZ(df, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0"))
+  
+   # r <- brick(file, varname = "u")
+   
+   r <- rast(file)
+   ext(r)=c(-180, 180, -90, 90)
+  
+  #nested for loop to extract data for each coordinate
+  for(j in 1:nrow(sites)){
+    
+    temp_lon <- sites_lon[j]
+    temp_lat <- sites_lat[j]
+    
+    extract_metric <- terra::extract(r[names(r)[1]], vect(cbind(temp_lon, temp_lat), crs="+proj=longlat +datum=WGS84"), method="simple", cells=FALSE, xy=FALSE)
+    
+    ## create vector with all the extracted metrics from all the coordinates 1:nrow(sites)
+    ## this vector is one month of data for all 5,000 site locations ##
+    holding[j,i] <-  extract_metric$u
+    
+  }
+  colname = curvel_files[i] %>% str_split(pattern = "_") %>% unlist()
+  colnames(holding)[i] = colname[4]
+     
+  nc_close(nc_open(file))
+}
+
+matrix_curvel_zonal <- data.frame(cbind(sites_lon, sites_lat, holding))
+
+#resetting our wd to home
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
+```
+
+## MERIDIONAL CURRENTS: for looping through files
+```{r}
+# setting wd to our data file so that R can find everything
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OSCAR_L4_OC_FINAL_V2.0")
+
+# create a holding vector/matrix
+# this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
+holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = length(curvel_files)))
+
+#first for loop()
+for(i in 1:length(curvel_files)){
+  
+  #open each file
+  file <- curvel_files[i]
+  nc_open(file)
+  
+  #turn this data frame into a raster
+  r <- rast(file)
+  ext(r)=c(-180, 180, -90, 90)
+  
+  
+  #nested for loop to extract data for each coordinate
+  for(j in 1:nrow(sites)){
+    
+    temp_lon <- sites_lon[j]
+    temp_lat <- sites_lat[j]
+    
+    extract_metric <- terra::extract(r[names(r)[3]], vect(cbind(temp_lon, temp_lat), crs="+proj=longlat +datum=WGS84"), method="simple", cells=FALSE, xy=FALSE)
+    
+    ## create vector with all the extracted metrics from all the coordinates 1:nrow(sites)
+    ## this vector is one month of data for all 5,000 site locations ##
+    holding[j,i] <-  extract_metric$v
+    
+  }
+  colname = curvel_files[i] %>% str_split(pattern = "_") %>% unlist()
+  colnames(holding)[i] = colname[4]
+     
+  nc_close(nc_open(file))
+}
+
+matrix_curvel_meridional <- data.frame(cbind(sites_lon, sites_lat, holding))
+
+#resetting our wd to home
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
+```
+
+# POC
+```{r}
+ncfile_poc <- nc_open( here("data", "bivalve_model","data_NetCDF", "OceanColor_POC",  "AQUA_MODIS.20141001_20141031.L3m.MO.POC.poc.4km.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
+
+print(ncfile_poc)
+
+attributes(ncfile_poc$var)
+attributes(ncfile_poc$dim)
+
+## lat and long names:
+## "lat" and "lon"
+```
+
+## Reading in files 
+```{r}
+poc_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_POC", pattern = "*.nc")
+```
+
+## for looping through files
+```{r}
+
+# setting wd to our data file so that R can find everything
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/OceanColor_POC")
+
+# create a holding vector/matrix
+# this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
+holding <- as_data_frame(matrix(data = NaN, nrow = nrow(sites), ncol = length(poc_files)))
+
+#first for loop()
+for(i in 1:length(poc_files)){
+  
+  #open each file
+  file <- poc_files[i]
+  
+  nc_open(file, write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE)
+  
+  
+  r <- brick(file, varname = "poc")
+  
+  
+  #nested for loop to extract data for each coordinate
+  for(j in 1:nrow(sites)){
+    
+    temp_lon <- sites_lon[j]
+    temp_lat <- sites_lat[j]
+    
+    extract_metric <- raster::extract(r, SpatialPoints(cbind(temp_lon, temp_lat)), method='simple')
+    
+    ## trying to create a vector with all the extracted metrics from all the coordinates 1:nrow(sites)
+    ## this vector is one month of data for all 5,000 site locations ##
+    holding[j,i] <-  extract_metric 
+    
+  }
+  colname = poc_files[i] %>% str_split(pattern = "_") %>% unlist()
+  colnames(holding)[i] = colname[2]
+     
+  nc_close(nc_open(file))
+}
+
+matrix_poc <- data.frame(cbind(sites_lon, sites_lat, holding))
+
+#resetting our wd to home
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
+```
+
+## wrangling current velocity data - zonal
+```{r}
+
+## Pivot data to be longer and then group by and summarize/mean ##
+
+long_matrix_curvel_zonal <- matrix_curvel_zonal %>% 
+  pivot_longer(cols = starts_with("X20"), names_to = "day", values_to = "velocity")
+
+months <- rep(rep(c("oct_14", "nov__14", "dec_14", "jan_15", "feb_15", "mar_15", "ap_15", "may_15", "jun_15", "jul_15", "aug_15", "sep_15", "oct_15", "nov_15", "dec_15", "jan_16", "feb_16", "mar_16"), times = c(31, 30, 31, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 31, 29, 31)), times = 5000)
+
+# This is the final data frame that should be used in reconciling zonal/meridional waves
+zonal_curvel_bind <- cbind(long_matrix_curvel_zonal, months) %>% 
+  group_by(sites_lon, sites_lat, months) %>% 
+  summarize(vel_monthly_zon = mean(velocity, na.rm = TRUE))
+
+#####################################################################
+
+
+```
+
+## wrangling current velocity data - meridional
+```{r}
+
+## Pivot data to be longer and then group by and summarize/mean ##
+
+long_matrix_curvel_meridional <- matrix_curvel_meridional %>% 
+  pivot_longer(cols = starts_with("X20"), names_to = "day", values_to = "velocity")
+
+months <- rep(rep(c("oct_14", "nov__14", "dec_14", "jan_15", "feb_15", "mar_15", "ap_15", "may_15", "jun_15", "jul_15", "aug_15", "sep_15", "oct_15", "nov_15", "dec_15", "jan_16", "feb_16", "mar_16"), times = c(31, 30, 31, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 31, 29, 31)), times = 5000)
+
+# This is the final data frame that should be used in reconciling zonal/meridional waves
+meridional_curvel_bind <- cbind(long_matrix_curvel_meridional, months) %>% 
+  group_by(sites_lon, sites_lat, months) %>% 
+  summarize(vel_monthly_mer = mean(velocity, na.rm = TRUE))
+
+#####################################################################
+
+```
+
+## reconciling zonal and meridional waves
+```{r}
+# Use a^2+b^2 = c^2
+
+curvel_merged <- base::merge(zonal_curvel_bind, meridional_curvel_bind, by = c("sites_lon", "sites_lat", "months")) %>% 
+  mutate(total_curvel = sqrt((vel_monthly_zon)^2 + (vel_monthly_mer)^2)) %>% 
+  dplyr::select(sites_lon, sites_lat, months, total_curvel) %>% # only selecting the resolved currents
+  pivot_wider(names_from = months, values_from = total_curvel) # organizing the data like the other data frames
+
+
+```
+
+
+
+# creating full data frame
+```{r, eval=FALSE}
+data_mixsst <- data.frame(
+  base::merge(matrix_mix, matrix_sst, by = c("sites_lon", "sites_lat"))
+)
+
+#### Code to wrangle daily data and make it monthly data ####
+### must also use pathagorean theorem for reconciling velocities ###
+##########################################################################
+# data_curvel <- data.frame(
+#   base::merge(matrix_curvel_zonal, matrix_curvel_meridional, by = c("sites_lon", "sites_lat"))
+#   )
+
+data_curvelpoc <- data.frame(
+  base::merge(curvel_merged, matrix_poc, by = c("sites_lon", "sites_lat"))
+)
+
+alldata <- data.frame(
+  base::merge(data_mixsst, data_curvelpoc, by = c("sites_lon", "sites_lat"))) %>% 
+  #na.omit() # removing lines with any NAs in any columns
+```
+
+## write csv of all data dataframe
+
+```{r}
+#write.csv(alldata, here("data", "alldata_forbivalvemodel1.csv"))
+#remove column names after this (should've done it before writing)
+```
+
+## writing in new csv of the data
+This data frame has been adjusted to make the daily current velocity data a monthly average
+
+```{r, eval=FALSE}
+# new_data <- read.csv(here("data", "bivalve_model", "celldata3.csv"), header = FALSE) %>% 
+#   na.omit() %>% # removing lines with any NAs in any columns
+#   dplyr::select(!1) 
+# 
+# write.csv(new_data, here("data", "celldata4.csv"), col.names = F)
+```
+
