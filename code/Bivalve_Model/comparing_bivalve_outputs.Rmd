@@ -1,0 +1,153 @@
+---
+title: "comparing both bivalve model years"
+author: 'By: Claire Gonzales'
+date: "2024-07-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+
+library(tidyverse)
+library(here)
+library(stats)
+library(ggplot2)
+```
+
+## Read in data
+```{r}
+output_12 <- read.csv(here("data","bivalve_model","LookUpTable_201214.csv"))
+output_14 <- read.csv(here("data","bivalve_model","LookUpTable_201416.csv"))
+
+```
+
+# Merge
+
+```{r}
+combined <- base::merge(output_12, output_14, by = c("site", "long", "lat"), all = TRUE) %>% 
+  mutate(yield_12 = yield.x,
+         yield_14 = yield.y
+         ) %>% 
+  select("site", "long", "lat", "yield_12", "yield_14")
+
+```
+
+# t testing the two yield groups
+
+```{r}
+
+## converting data frames to be paired vectors## 
+
+combined_nocopies <- base::merge(output_12, output_14, by = c("site", "long", "lat"), all = FALSE) %>% 
+  mutate(yield_12 = yield.x,
+         yield_14 = yield.y
+         ) %>% 
+  select("site", "long", "lat", "yield_12", "yield_14")
+
+vec12 <- combined_nocopies %>% 
+  pull(yield_12)
+
+vec14 <- combined_nocopies %>% 
+  pull(yield_14)
+
+
+```
+
+```{r}
+## conducting t test ##
+
+t.test(x = vec14, y = vec12, paired = TRUE)
+
+
+############## OUTPUT ###################
+# 	Paired t-test
+# 
+# data:  vec14 and vec12
+# t = -21.139, df = 4442, p-value < 2.2e-16
+# alternative hypothesis: true mean difference is not equal to 0
+# 95 percent confidence interval:
+#  -448882.6 -372689.2
+# sample estimates:
+# mean difference 
+#       -410785.9 
+```
+
+```{r}
+mean(vec12)
+sd(vec12)
+mean(vec14)
+sd(vec14)
+```
+
+# visualizations
+
+```{r}
+
+
+combined_long <- combined %>%
+  pivot_longer(yield_12:yield_14,
+               names_to = "year",
+               names_prefix = "yield_",
+               values_to = "yield")
+
+## yield by latitude
+ggplot(data = combined_long, aes(x = lat, y = yield)) +
+  geom_line(aes(color = year)) +
+  theme_minimal()
+##Yikes this output is messy##
+
+## histogram (shows left skew for both but more dramatic left skew for 2014-16 time frames)
+ggplot(data = combined_long, aes(x = yield, fill = year)) +
+  geom_histogram() +
+  theme_minimal()
+
+##boxplot and violin plot
+ggplot(data = combined_long, aes(x = year, y = yield, fill = year)) +
+  geom_boxplot() +
+  geom_jitter(color="black", size=0.4, alpha=0.9) +
+  theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+  theme_minimal()
+
+ggplot(data = combined_long, aes(x = year, y = yield, fill = year)) +
+  geom_violin() +
+  #geom_jitter(color="black", size=0.4, alpha=0.9) +
+  theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+  theme_minimal()
+```
+
+# working with SST data and bivalve yields
+```{r}
+#need to reformat the SST matricies
+
+sst_2012 <- matrix_sst_2012 %>% 
+  pivot_longer(MODIS.20121001:MODIS.20140301,
+                         names_to = "month",
+                         names_prefix = "MODIS.",
+                         values_to = "SST")
+# %>%  ######## SOMETHING IS OFF HERE #############
+#   group_by(sites_lon, sites_lat) %>% 
+#   summarize(sst_ave = mean(SST))
+
+# sstyield_2012 <- base::merge(matrix_sst_2012, matrix_sst_2014, by = c("site", "long", "lat"), all = FALSE) %>%
+#   pivot_longer(#yield_12:yield_14,
+#                names_to = #"year",
+#                names_prefix = #"yield_",
+#                values_to = #"yield")
+# 
+# sstyield_2014 <- base::merge() %>%
+#   pivot_longer(#yield_12:yield_14,
+#                names_to = #"year",
+#                names_prefix = #"yield_",
+#                values_to = #"yield")
+```
+
