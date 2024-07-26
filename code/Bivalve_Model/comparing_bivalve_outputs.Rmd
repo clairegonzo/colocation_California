@@ -1,8 +1,12 @@
 ---
-title: "comparing both bivalve model years"
+title: "Comparing bivalve model outputs of years 2012-14 and 2014-16"
 author: 'By: Claire Gonzales'
 date: "2024-07-24"
-output: html_document
+output: 
+  html_document: 
+    theme: lumen
+    toc: yes
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -18,14 +22,14 @@ library(stats)
 library(ggplot2)
 ```
 
-## Read in data
+## Read and wrangle in data
 ```{r}
 output_12 <- read.csv(here("data","bivalve_model","LookUpTable_201214.csv"))
 output_14 <- read.csv(here("data","bivalve_model","LookUpTable_201416.csv"))
 
 ```
 
-# Merge
+Merging outputs of 2012 and 2014 outputs
 
 ```{r}
 combined <- base::merge(output_12, output_14, by = c("site", "long", "lat"), all = TRUE) %>% 
@@ -36,7 +40,8 @@ combined <- base::merge(output_12, output_14, by = c("site", "long", "lat"), all
 
 ```
 
-# t testing the two yield groups
+### T testing the two yield groups
+Is there a signififcant difference between the (paired) yield values of the 2012 and 2014 versions of the model?
 
 ```{r}
 
@@ -75,7 +80,9 @@ t.test(x = vec14, y = vec12, paired = TRUE)
 # mean difference 
 #       -410785.9 
 ```
+Yes, these outputs are different.
 
+Calculating the mean and sd values for each year below:
 ```{r}
 mean(vec12)
 sd(vec12)
@@ -83,10 +90,9 @@ mean(vec14)
 sd(vec14)
 ```
 
-# visualizations
+## Initial visualizations of model outputs
 
 ```{r}
-
 
 combined_long <- combined %>%
   pivot_longer(yield_12:yield_14,
@@ -103,6 +109,7 @@ ggplot(data = combined_long, aes(x = lat, y = yield)) +
 ## histogram (shows left skew for both but more dramatic left skew for 2014-16 time frames)
 ggplot(data = combined_long, aes(x = yield, fill = year)) +
   geom_histogram() +
+  xlim(c(2300000, 11800000)) +
   theme_minimal()
 
 ##boxplot and violin plot
@@ -125,7 +132,20 @@ ggplot(data = combined_long, aes(x = year, y = yield, fill = year)) +
   theme_minimal()
 ```
 
-# working with SST data and bivalve yields
+# Working with SST data and bivalve yields
+
+Bringing in the SST data to look at if this could be a driver for the difference in model yields across years. This is likely due to the blob, but POC could also be a factor.
+
+To avoid having to rerun the code in netCDFfile_testing.Rmd and netCDFfile_newbivalvedata.Rmd to wrangle the SST data, I've written those matricies as csvs and will read them in here to work with them.
+```{r}
+# write.csv(matrix_sst_2012, here("data", "matrix_sst_2012.csv"))
+# write.csv(matrix_sst_2014, here("data", "matrix_sst_2014.csv"))
+
+matrix_sst_2012 <- read.csv(here("data", "matrix_sst_2012.csv"))
+matrix_sst_2014 <- read.csv(here("data", "matrix_sst_2014.csv"))
+
+```
+
 ```{r}
 #need to reformat the SST matricies
 
@@ -133,21 +153,81 @@ sst_2012 <- matrix_sst_2012 %>%
   pivot_longer(MODIS.20121001:MODIS.20140301,
                          names_to = "month",
                          names_prefix = "MODIS.",
-                         values_to = "SST")
-# %>%  ######## SOMETHING IS OFF HERE #############
-#   group_by(sites_lon, sites_lat) %>% 
-#   summarize(sst_ave = mean(SST))
+                         values_to = "SST") %>%
+  group_by(sites_lon, sites_lat) %>% 
+  summarize(sst_ave = mean(SST)) %>% 
+  mutate(lat = sites_lat,
+         long = sites_lon,
+         sst_ave12 = sst_ave) %>% 
+  ungroup() %>% 
+  dplyr::select("long", "lat", "sst_ave12")
 
-# sstyield_2012 <- base::merge(matrix_sst_2012, matrix_sst_2014, by = c("site", "long", "lat"), all = FALSE) %>%
-#   pivot_longer(#yield_12:yield_14,
-#                names_to = #"year",
-#                names_prefix = #"yield_",
-#                values_to = #"yield")
-# 
-# sstyield_2014 <- base::merge() %>%
-#   pivot_longer(#yield_12:yield_14,
-#                names_to = #"year",
-#                names_prefix = #"yield_",
-#                values_to = #"yield")
+sst_2014 <- matrix_sst_2014 %>% 
+  pivot_longer(MODIS.20141001:MODIS.20160301,
+                         names_to = "month",
+                         names_prefix = "MODIS.",
+                         values_to = "SST") %>%
+  group_by(sites_lon, sites_lat) %>% 
+  summarize(sst_ave = mean(SST)) %>% 
+  mutate(lat = sites_lat,
+         long = sites_lon,
+         sst_ave14 = sst_ave) %>% 
+  ungroup() %>% 
+  dplyr::select("long", "lat", "sst_ave14")
+
+
+all_sst <- base::merge(sst_2012, sst_2014, by = c("long", "lat"), all = TRUE) %>% 
+  pivot_longer(sst_ave12:sst_ave14,
+               names_to = "year",
+               names_prefix = "sst_ave",
+               values_to = "sst_ave")
+
+
+all_sst_yield <- base::merge (all_sst, combined_long, by = c("lat", "long", "year"), all = TRUE) %>%
+  dplyr::select("site", "long", "lat", "year", "sst_ave", "yield")
+
+
 ```
+
+## Yield and SST visualizations
+```{r}
+ggplot(data = all_sst_yield, aes(x = sst_ave, y = yield)) +
+  geom_point(aes(color = year)) +
+  theme_minimal()
+
+## sst only ##
+ggplot(data = all_sst_yield, aes(x = year, y = sst_ave, fill = year)) +
+  geom_violin() +
+  #geom_jitter(color="black", size=0.4, alpha=0.9) +
+  theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+  theme_minimal()
+
+#ggplot_build(p)$data
+```
+
+SST versus yield for 2012 and 2014 models
+```{r}
+all_12 <-  all_sst_yield %>% 
+  filter(year == "12")
+
+ggplot(data = all_12, aes(x = sst_ave, y = yield)) +
+  geom_point(color = "#F8766D") +
+  xlim(c(10,21)) +
+  ylim(c(2500000, 11580000)) +
+  theme_minimal()
+
+
+all_14 <- all_sst_yield %>% 
+  filter(year == "14")
+
+ggplot(data = all_14, aes(x = sst_ave, y = yield)) +
+  geom_point(color = "#00BFC4") +
+  xlim(c(10,21)) +
+    ylim(c(2500000, 11580000)) +
+  theme_minimal()
+```
+
 
