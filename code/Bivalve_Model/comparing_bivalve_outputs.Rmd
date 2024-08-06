@@ -285,3 +285,45 @@ all_poc_yield <- base::merge (all_poc, combined_long, by = c("lat", "long", "yea
 
 
 ```
+
+## Yield and POC visualizations
+```{r}
+ggplot(data = all_poc_yield, aes(x = poc_ave, y = yield)) +
+  geom_point(aes(color = year)) +
+  theme_minimal()
+
+## poc only ##
+ggplot(data = all_poc_yield, aes(x = year, y = poc_ave, fill = year)) +
+  geom_violin() +
+  #geom_jitter(color="black", size=0.4, alpha=0.9) +
+  theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+  theme_minimal()
+
+#ggplot_build(p)$data
+```
+
+POC versus yield for 2012 and 2014 models
+```{r}
+all_12 <-  all_poc_yield %>% 
+  filter(year == "12")
+
+ggplot(data = all_12, aes(x = poc_ave, y = yield)) +
+  geom_point(color = "#F8766D") +
+  xlim(c(10,21)) +
+  ylim(c(2500000, 11580000)) +
+  theme_minimal()
+
+
+all_14 <- all_poc_yield %>% 
+  filter(year == "14")
+
+ggplot(data = all_14, aes(x = poc_ave, y = yield)) +
+  geom_point(color = "#00BFC4") +
+  xlim(c(10,21)) +
+    ylim(c(2500000, 11580000)) +
+  theme_minimal()
+```
+
