@@ -36,7 +36,7 @@ combined <- base::merge(output_12, output_14, by = c("site", "long", "lat"), all
   mutate(yield_12 = yield.x,
          yield_14 = yield.y
          ) %>% 
-  select("site", "long", "lat", "yield_12", "yield_14")
+  dplyr::select("site", "long", "lat", "yield_12", "yield_14")
 
 ```
 
@@ -230,4 +230,58 @@ ggplot(data = all_14, aes(x = sst_ave, y = yield)) +
   theme_minimal()
 ```
 
+# Working with POC data and bivalve yields
+Similar to the SST work above, bringing in the POC data to look at if this could be a driver for the difference in model yields across years. 
 
+To avoid having to rerun the code in netCDFfile_testing.Rmd and netCDFfile_newbivalvedata.Rmd to wrangle the POC data, I've written those matricies as csvs and will read them in here to work with them.
+```{r}
+# write.csv(matrix_poc_2012, here("data", "matrix_poc_2012.csv"))
+# write.csv(matrix_poc_2014, here("data", "matrix_poc_2014.csv"))
+
+matrix_poc_2012 <- read.csv(here("data", "matrix_sst_2012.csv"))
+matrix_poc_2014 <- read.csv(here("data", "matrix_sst_2014.csv"))
+
+```
+
+```{r}
+#need to reformat the POC matricies
+
+poc_2012 <- matrix_poc_2012 %>% 
+  pivot_longer(MODIS.20121001:MODIS.20140301,
+                         names_to = "month",
+                         names_prefix = "MODIS.",
+                         values_to = "POC") %>%
+  group_by(sites_lon, sites_lat) %>% 
+  summarize(poc_ave = mean(POC)) %>% 
+  mutate(lat = sites_lat,
+         long = sites_lon,
+         poc_ave12 = poc_ave) %>% 
+  ungroup() %>% 
+  dplyr::select("long", "lat", "poc_ave12")
+
+poc_2014 <- matrix_poc_2014 %>% 
+  pivot_longer(MODIS.20141001:MODIS.20160301,
+                         names_to = "month",
+                         names_prefix = "MODIS.",
+                         values_to = "POC") %>%
+  group_by(sites_lon, sites_lat) %>% 
+  summarize(poc_ave = mean(POC)) %>% 
+  mutate(lat = sites_lat,
+         long = sites_lon,
+         poc_ave14 = poc_ave) %>% 
+  ungroup() %>% 
+  dplyr::select("long", "lat", "poc_ave14")
+
+
+all_poc <- base::merge(poc_2012, poc_2014, by = c("long", "lat"), all = TRUE) %>% 
+  pivot_longer(poc_ave12:poc_ave14,
+               names_to = "year",
+               names_prefix = "poc_ave",
+               values_to = "poc_ave")
+
+
+all_poc_yield <- base::merge (all_poc, combined_long, by = c("lat", "long", "year"), all = TRUE) %>%
+  dplyr::select("site", "long", "lat", "year", "poc_ave", "yield")
+
+
+```
