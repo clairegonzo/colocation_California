@@ -51,7 +51,7 @@ combined_nocopies <- base::merge(output_12, output_14, by = c("site", "long", "l
   mutate(yield_12 = yield.x,
          yield_14 = yield.y
          ) %>% 
-  select("site", "long", "lat", "yield_12", "yield_14")
+  dplyr::select("site", "long", "lat", "yield_12", "yield_14")
 
 vec12 <- combined_nocopies %>% 
   pull(yield_12)
@@ -238,8 +238,8 @@ To avoid having to rerun the code in netCDFfile_testing.Rmd and netCDFfile_newbi
 # write.csv(matrix_poc_2012, here("data", "matrix_poc_2012.csv"))
 # write.csv(matrix_poc_2014, here("data", "matrix_poc_2014.csv"))
 
-matrix_poc_2012 <- read.csv(here("data", "matrix_sst_2012.csv"))
-matrix_poc_2014 <- read.csv(here("data", "matrix_sst_2014.csv"))
+matrix_poc_2012 <- read.csv(here("data", "matrix_poc_2012.csv"))
+matrix_poc_2014 <- read.csv(here("data", "matrix_poc_2014.csv"))
 
 ```
 
@@ -312,7 +312,7 @@ all_12 <-  all_poc_yield %>%
 
 ggplot(data = all_12, aes(x = poc_ave, y = yield)) +
   geom_point(color = "#F8766D") +
-  xlim(c(10,21)) +
+  xlim(c(77,2000)) +
   ylim(c(2500000, 11580000)) +
   theme_minimal()
 
@@ -322,8 +322,22 @@ all_14 <- all_poc_yield %>%
 
 ggplot(data = all_14, aes(x = poc_ave, y = yield)) +
   geom_point(color = "#00BFC4") +
-  xlim(c(10,21)) +
+  xlim(c(77,2000)) +
     ylim(c(2500000, 11580000)) +
   theme_minimal()
+```
+
+## POC vs SST
+```{r}
+all_poc_sst_yield <- base::merge (all_poc_yield, all_sst_yield, by = c("site","lat", "long", "year", "yield"), all = TRUE)
+
+```
+
+```{r}
+ggplot(data = all_poc_sst_yield, aes(x = sst_ave, y = poc_ave)) +
+  geom_point(aes(color = year)) +
+  geom_smooth(method = lm, color = "black", aes(linetype = year), se = FALSE) +
+  theme_minimal()
+
 ```
 
