@@ -75,7 +75,7 @@ sites_lon <- as.numeric(sites$longitude)
 #################### Wrangling NetCDF Files ####################
 
 # Mixed layer depth
-```{r}
+```{r, eval=FALSE, include=FALSE}
 ## looking at the data
 ncfile_mix <- nc_open( here("data", "bivalve_model","data_NetCDF", "ECCO_L4_MIXED_LAYER_DEPTH_05DEG_MONTHLY_V4R4",  "OCEAN_MIXED_LAYER_DEPTH_mon_mean_2014-10_ECCO_V4r4_latlon_0p50deg.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
 
@@ -87,7 +87,7 @@ attributes(ncfile_mix$dim)
 ```
 
 #New Mixed Layer Depth Files??
-```{r}
+```{r, eval=FALSE, include=FALSE}
 
 ## looking at the data
 ncfile_mix_v2 <- here("data", "bivalve_model","data_NetCDF", "OCEAN_MIXED_LAYER_DEPTH_mon_mean_2014-10_ECCO_V4r4_native_llc0090.nc")
@@ -118,7 +118,7 @@ raster::plot(r)
 nc_close(nc_open(ncfile_mix_v2))
 ```
 
-```{r}
+```{r, eval=FALSE, include=FALSE}
 ## looking at the data
 ncfile_mix_v3 <- here("data", "bivalve_model","data_NetCDF", "mercatorglorys12v1_gl12_mean_201410.nc")
 
@@ -151,7 +151,7 @@ nc_close(nc_open(ncfile_mix_v3))
 
 ## Reading in files 
 ```{r}
-mix_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/curvel", pattern = "*.nc")
+mix_files <- list.files(path = "/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/mld", pattern = "*.nc")
 
 ```
 
@@ -187,7 +187,7 @@ Trying to for loop() through data to first gather metrics for each site (nested 
 ```{r}
 
 # setting wd to our data file so that R can find everything
-setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/curvel")
+setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2/data/bivalve_model/data_NetCDF/mld")
 
 # create a holding vector/matrix
 # this holding vector will be 18 columns across and 5000 long. Each cell will have monthly averaged data for each of the 5000 site points
@@ -446,7 +446,7 @@ setwd("/Users/clairegonzales/Documents/R projects/chap_2_sitingstudy/chap2")
 ```
 
 # POC
-```{r}
+```{r, eval=FALSE, include=FALSE}
 ncfile_poc <- nc_open( here("data", "bivalve_model","data_NetCDF", "OceanColor_POC",  "AQUA_MODIS.20141001_20141031.L3m.MO.POC.poc.4km.nc"), write=TRUE, readunlim=TRUE, verbose=FALSE, auto_GMT=TRUE, suppress_dimvals=FALSE, return_on_error=FALSE )
 
 print(ncfile_poc)
@@ -582,13 +582,13 @@ data_curvelpoc <- data.frame(
 
 alldata <- data.frame(
   base::merge(data_mixsst, data_curvelpoc, by = c("sites_lon", "sites_lat"))) %>% 
-  #na.omit() # removing lines with any NAs in any columns
+  na.omit() # removing lines with any NAs in any columns
 ```
 
 ## write csv of all data dataframe
 
 ```{r}
-#write.csv(alldata, here("data", "alldata_forbivalvemodel1.csv"))
+write.csv(alldata, here("data", "alldata_forbivalvemodel2014.csv"))
 #remove column names after this (should've done it before writing)
 ```
 
