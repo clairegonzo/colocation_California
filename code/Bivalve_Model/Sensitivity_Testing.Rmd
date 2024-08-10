@@ -1,0 +1,66 @@
+---
+title: "Sensitivity Testing"
+author: 'By: Claire Gonzales'
+date: "2024-08-10"
+output: 
+  html_document: 
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+
+library(tidyverse)
+library(here)
+library(stats)
+library(ggplot2)
+```
+
+
+## Read and wrangle in data
+```{r}
+
+output_main <- read.csv(here("data","bivalve_model","LookUpTable_201416.csv")) %>% 
+  dplyr::select("site", "long", "lat", "yield")
+output_s1 <- read.csv(here("data","bivalve_model","LookUpTable_s1.csv"))
+output_s2 <- read.csv(here("data","bivalve_model","LookUpTable_s2.csv"))
+output_s3 <- read.csv(here("data","bivalve_model","LookUpTable_s3.csv"))
+
+```
+
+```{r}
+s1 <- output_s1 %>% 
+  mutate(s1_yield = yield) %>% 
+  dplyr::select("site", "long", "lat", "s1_yield")
+
+s2 <- output_s2 %>% 
+  mutate(s2_yield = yield) %>% 
+  dplyr::select("site", "long", "lat", "s2_yield")
+
+s3 <- output_s3 %>% 
+  mutate(s3_yield = yield) %>% 
+  dplyr::select("site", "long", "lat", "s3_yield")
+```
+
+Merging the 3 frames. Format will be wide so then we will make it longer.
+```{r}
+wide1 <- merge(output_main, s1, by = c("site", "long", "lat"), all = TRUE)
+
+wide2 <- merge(s2, s3, by = c("site", "long", "lat"), all = TRUE)
+
+wide <- merge(wide1, wide2, by = c("site", "long", "lat"), all = TRUE)
+```
+
+```{r}
+alldata <- wide %>% 
+  pivot_longer(yield:s3_yield,
+               names_to = "test",
+               values_to = "yield")
+```
+
