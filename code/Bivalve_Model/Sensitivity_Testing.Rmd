@@ -88,8 +88,24 @@ ggplot(data = alldata, aes(x = test, y = yield, fill = test)) +
   theme_minimal()
 ```
 
-## ANOVA
+## Percent change
+```{r}
+wide_percents <- wide %>% 
+  mutate(s1_percchange = (((s1_yield-yield)/yield)*100),
+         s2_percchange = (((s2_yield-yield)/yield)*100),
+         s3_percchange = (((s3_yield-yield)/yield)*100),
+         )
 
+summary_percents <- wide_percents %>% 
+  #group_by(site) %>% 
+  summarize(mean_s1percchhange = mean(s1_percchange),
+            mean_s2percchhange = mean(s2_percchange),
+            mean_s3percchhange = mean(s3_percchange)
+            )
+```
+
+
+## ANOVA
 ```{r}
 summary(alldata)
 
