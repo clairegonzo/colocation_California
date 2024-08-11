@@ -20,6 +20,7 @@ library(tidyverse)
 library(here)
 library(stats)
 library(ggplot2)
+library(stats)
 ```
 
 
@@ -84,6 +85,29 @@ ggplot(data = alldata, aes(x = test, y = yield, fill = test)) +
       legend.position="none",
       plot.title = element_text(size=11)
     ) +
+  theme_minimal()
+```
+
+## ANOVA
+
+```{r}
+summary(alldata)
+
+```
+
+```{r}
+aov <- aov(yield ~ test, 
+           data = alldata)
+
+summary(aov)
+```
+
+```{r}
+hist(aov$residuals)
+
+ggplot(data = alldata, aes(sample = yield)) +
+  geom_qq() +
+  facet_wrap( ~ test) +
   theme_minimal()
 ```
 
