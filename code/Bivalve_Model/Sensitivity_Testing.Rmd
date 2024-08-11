@@ -64,3 +64,26 @@ alldata <- wide %>%
                values_to = "yield")
 ```
 
+## Visualizations
+
+```{r}
+##boxplot and violin plot
+ggplot(data = alldata, aes(x = test, y = yield, fill = test)) +
+  geom_boxplot() +
+  #geom_jitter(color="black", size=0.4, alpha=0.9) +
+  theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+  theme_minimal()
+
+ggplot(data = alldata, aes(x = test, y = yield, fill = test)) +
+  geom_violin() +
+  #geom_jitter(color="black", size=0.4, alpha=0.9) +
+  theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+  theme_minimal()
+```
+
