@@ -148,6 +148,7 @@ wave <- terra::rast(here("data", "tiff", "wind_sfunc_v3.tif"))
 plot(wave, main = "wave energy (no transformation)")
 ```
 
+I will need to extract the location of each cell first and create a list of those points. Then as R to pull the value at each of those spatial points.
 ```{r}
 
 ```
