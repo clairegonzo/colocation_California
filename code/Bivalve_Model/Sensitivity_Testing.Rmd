@@ -127,3 +127,28 @@ ggplot(data = alldata, aes(sample = yield)) +
   theme_minimal()
 ```
 
+## Visualization data transformations
+This section deals with the production data and transformed production data from each of the 4 sub-models. We want to compare the transformed data to the theoretical transformation (line resulting from the equation we used to transform the data - how well do the data points sit on this line?).
+
+I also want to use this opportunity to look at the production data (pre-transformation) in some non-spatial ways.
+
+I will read in the rasters and then extract the value in each cell. 
+
+Read in data using `terra`
+```{r}
+library(terra)
+library(sf)
+```
+
+```{r}
+wave <- terra::rast(here("data", "tiff", "wind_sfunc_v3.tif"))
+```
+
+```{r}
+plot(wave, main = "wave energy (no transformation)")
+```
+
+```{r}
+
+```
+
