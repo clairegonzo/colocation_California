@@ -141,15 +141,30 @@ library(sf)
 ```
 
 ```{r}
-wave <- terra::rast(here("data", "tiff", "wind_sfunc_v3.tif"))
+wind <- terra::rast(here("data", "tiff", "wind_sfunc_v3.tif"))
 ```
 
 ```{r}
-plot(wave, main = "wave energy (no transformation)")
+terra::plot(wind, main = "wave energy (transformed)")
 ```
 
 I will need to extract the location of each cell first and create a list of those points. Then as R to pull the value at each of those spatial points.
 ```{r}
+wind_df <- terra::as.data.frame(wave, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE) 
 
+head(wind_df)
+
+tail(wind_df)
+
+
+## idk if this is working ##
+# summ <- wind_df %>% 
+#   group_by(Band_1) %>% 
+#   summarize(n = n())
+# 
+# ggplot(data = wind_df, aes(x = Band_1)) +
+#   geom_histogram() +
+#   theme_minimal() +
+#   xlim(c(0.01,1.00))
 ```
 
