@@ -140,31 +140,93 @@ library(terra)
 library(sf)
 ```
 
+### Wave energy
 ```{r}
-wind <- terra::rast(here("data", "tiff", "wind_sfunc_v3.tif"))
+wave <- terra::rast(here("data", "tiff", "wave_linfunc_v1.tif"))
+
+terra::plot(wave, main = "Wave Energy (transformed linearly)")
 ```
 
 ```{r}
-terra::plot(wind, main = "wave energy (transformed)", )
-```
+wave_df <- terra::as.data.frame(wave, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
 
-I will need to extract the location of each cell first and create a list of those points. Then as R to pull the value at each of those spatial points.
-```{r}
-wind_df <- terra::as.data.frame(wave, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE) 
+head(wave_df)
 
-head(wind_df)
+tail(wave_df)
 
-tail(wind_df)
-
-
-## idk if this is working ##
-# summ <- wind_df %>% 
-#   group_by(Band_1) %>% 
-#   summarize(n = n())
-# 
-# ggplot(data = wind_df, aes(x = Band_1)) +
-#   geom_histogram() +
-#   theme_minimal() +
+ggplot(data = wave_df, aes(x = Band_1)) +
+  geom_histogram() +
+  theme_minimal()
+# +
 #   xlim(c(0.01,1.00))
 ```
 
+```{r}
+# Creating a scatterplot of data with the transformation line on it
+
+graph_wa <- ggplot(data = wave_df, aes(x = , y =)) +
+  geom_point() +
+  theme_minimal()
+```
+
+### Wind energy
+```{r}
+################ NEED TO REEXPORT THIS NOT AS A BAND ################
+wind <- terra::rast(here("data", "tiff", "wind_sfunc_v1.tif"))
+
+terra::plot(wind, main = "Wind Energy (transformed linearly)")
+```
+
+```{r}
+# wind_df <- terra::as.data.frame(wind, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
+# 
+# head(wind_df)
+# 
+# tail(wind_df)
+# 
+# ggplot(data = wind_df, aes(x = Band_1)) +
+#   geom_histogram() +
+#   theme_minimal()
+```
+
+### Aquaculture 
+
+```{r}
+aqua <- terra::rast(here("data", "tiff", "aqua_sfunc_v2.tif"))
+
+terra::plot(aqua, main = "Aquaculture Production (S-transformation)")
+```
+
+```{r}
+aqua_df <- terra::as.data.frame(aqua, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
+
+head(aqua_df)
+
+tail(aqua_df)
+
+ggplot(data = aqua_df, aes(x = Band_1)) +
+  geom_histogram() +
+  theme_minimal()
+```
+
+### Fisheries
+
+```{r}
+############### ALSO NEED TO FIX THIS ##########
+## Lat and longs not available ##
+fishy <- terra::rast(here("data", "tiff", "catchdata_output_updated_.tif"))
+
+terra::plot(fishy, main = "Fisheries Production (Z-transformation)")
+```
+
+```{r}
+fishy_df <- terra::as.data.frame(fishy, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
+
+head(fishy_df)
+
+tail(fishy_df)
+
+ggplot(data = fishy_df, aes(x = catchdata_output_updated_)) +
+  geom_histogram() +
+  theme_minimal()
+```
