@@ -181,6 +181,14 @@ graph_wa <- ggplot(data = wave_df, aes(x = , y =)) +
   theme_minimal()
 ```
 
+Merging the pre-transformed and transformed data frames
+
+```{r}
+####### YIKES THIS DOESNT WORK ################
+# wave_all <- merge(wave_raw_df, wave_df, by = c("x", "y"), all = FALSE)
+```
+
+
 ### Wind energy
 ```{r}
 
@@ -216,6 +224,12 @@ ggplot(data = wind_raw_df, aes(x = Band_1)) +
 
 ```
 
+Merging
+```{r}
+# wind_all <- merge(wind_raw_df, wind_df, by = c("x", "y"), all = FALSE)
+```
+
+
 ### Aquaculture 
 
 ```{r}
@@ -248,6 +262,13 @@ ggplot(data = aqua_raw_df, aes(x = aqua_notransform)) +
   geom_histogram() +
   theme_minimal()
 ```
+
+Merging
+
+```{r}
+aqua_all <- merge(aqua_raw_df, aqua_df, by = c("x", "y"), all = FALSE)
+```
+
 
 ### Fisheries
 SOMETHNG IS STILL WRONG HERE.
@@ -284,3 +305,16 @@ ggplot(data = fishy_raw_df, aes(x = catchdata_notransform)) +
   theme_minimal()
  # xlim(c(-1, 500000))
 ```
+
+```{r}
+fishy_all <- merge(fishy_raw_df, fishy_df, by = c("x", "y"), all = FALSE)
+```
+
+
+### Visualizations
+```{r}
+# wave_graph <- ggplot(data = wave_all, aes(x = Band_1, y = wave_notransform)) +
+#   geom_point() +
+#   theme_minimal()
+```
+
