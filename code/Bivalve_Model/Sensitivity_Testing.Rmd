@@ -20,6 +20,7 @@ library(tidyverse)
 library(here)
 library(stats)
 library(ggplot2)
+library(dplyr)
 library(stats)
 ```
 
@@ -149,6 +150,7 @@ terra::plot(wave, main = "Wave Energy (transformed linearly)")
 terra::plot(wave_raw, main = "Wave Energy (no transformation)")
 ```
 
+View head and tail of data frame
 ```{r}
 wave_df <- terra::as.data.frame(wave, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
 
@@ -186,6 +188,13 @@ Merging the pre-transformed and transformed data frames
 ```{r}
 ####### YIKES THIS DOESNT WORK ################
 # wave_all <- merge(wave_raw_df, wave_df, by = c("x", "y"), all = FALSE)
+
+#trying to combine spatraters first and then will try to convert to tabular data from this format
+
+wave_sprc <- sprc(wave_raw, wave)
+# terra::plot(wave_sprc, main = "Testing sprc")
+
+wave_sprc_df <- terra::as.data.frame(wave_sprc, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
 ```
 
 
@@ -199,6 +208,7 @@ terra::plot(wind, main = "Wind Energy (transformed linearly)")
 terra::plot(wind_raw, main = "Wind Energy (no transformation)")
 ```
 
+View head and tail of data frame
 ```{r}
 wind_df <- terra::as.data.frame(wind, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
 
@@ -240,6 +250,7 @@ terra::plot(aqua, main = "Aquaculture Production (S-transformation)")
 terra::plot(aqua_raw, main = "Aquaculture Production (no transformation)")
 ```
 
+View head and tail of data frame
 ```{r}
 aqua_df <- terra::as.data.frame(aqua, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
 
@@ -281,7 +292,7 @@ fishy_raw <- terra::rast(here("data", "tiff", "catchdata_notransform.tif"))
 terra::plot(fishy, main = "Fisheries Production (Z-transformation)")
 terra::plot(fishy_raw, main = "Fisheries Production (no transformation)")
 ```
-
+View head and tail of data frame
 ```{r}
 fishy_df <- terra::as.data.frame(fishy, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
 
@@ -308,6 +319,63 @@ ggplot(data = fishy_raw_df, aes(x = catchdata_notransform)) +
 
 ```{r}
 fishy_all <- merge(fishy_raw_df, fishy_df, by = c("x", "y"), all = FALSE)
+```
+
+### Co-location Suitability Model
+```{r}
+colo <- terra::rast(here("data", "tiff", "CellSta_colocation_off.tif"))
+
+terra::plot(colo, main = "Co-location Suitability Score")
+```
+
+```{r}
+colo_df <- terra::as.data.frame(colo, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
+
+head(colo_df)
+
+tail(colo_df)
+
+ggplot(data = colo_df, aes(x = Band_1)) +
+  geom_histogram() +
+  theme_minimal()
+```
+
+Scatter plot showing the co-location suitability score related to latitude
+```{r}
+# library(hrbrthemes) #having issues downloading some of these dependencies
+
+ggplot(data = colo_df, aes(x = y, y = Band_1)) +
+  geom_point(size = 1) +
+  geom_smooth(method="lm") +
+  theme_minimal()
+
+ggplot(data = colo_df, aes(x = x, y = Band_1)) +
+  geom_point(size = 1) +
+  geom_smooth(method="lm") +
+  theme_minimal()
+```
+
+Linear models to correspond each graph above
+```{r}
+long_lm <- lm(Band_1 ~ y, data = colo_df)
+
+lat_lm <- lm(Band_1 ~ x, data = colo_df)
+
+# library(broom)
+# broom::tidy(long_lm)
+# broom::tidy(lat_lm)
+# glance(long_lm)
+# glance(lat_lm)
+
+summary(long_lm)
+summary(lat_lm)
+
+```
+
+Latitude seems to have the better correlation and higher R value
+```{r}
+plot(lat_lm)
+
 ```
 
 
