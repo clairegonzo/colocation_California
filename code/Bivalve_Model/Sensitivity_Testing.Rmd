@@ -143,8 +143,10 @@ library(sf)
 ### Wave energy
 ```{r}
 wave <- terra::rast(here("data", "tiff", "wave_linfunc_v1.tif"))
+wave_raw <- terra::rast(here("data", "tiff", "wave_notransform.tif"))
 
 terra::plot(wave, main = "Wave Energy (transformed linearly)")
+terra::plot(wave_raw, main = "Wave Energy (no transformation)")
 ```
 
 ```{r}
@@ -157,8 +159,18 @@ tail(wave_df)
 ggplot(data = wave_df, aes(x = Band_1)) +
   geom_histogram() +
   theme_minimal()
-# +
-#   xlim(c(0.01,1.00))
+
+###################################################
+
+wave_raw_df <- terra::as.data.frame(wave_raw, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
+
+head(wave_raw_df)
+
+tail(wave_raw_df)
+
+ggplot(data = wave_raw_df, aes(x = wave_notransform)) +
+  geom_histogram() +
+  theme_minimal()
 ```
 
 ```{r}
@@ -171,30 +183,47 @@ graph_wa <- ggplot(data = wave_df, aes(x = , y =)) +
 
 ### Wind energy
 ```{r}
-################ NEED TO REEXPORT THIS NOT AS A BAND ################
-wind <- terra::rast(here("data", "tiff", "wind_sfunc_v1.tif"))
+
+wind <- terra::rast(here("data", "tiff", "wind_linfunc_v_ProjectRas.tif"))
+wind_raw <- terra::rast(here("data", "tiff", "wind_notransform.tif"))
 
 terra::plot(wind, main = "Wind Energy (transformed linearly)")
+terra::plot(wind_raw, main = "Wind Energy (no transformation)")
 ```
 
 ```{r}
-# wind_df <- terra::as.data.frame(wind, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
-# 
-# head(wind_df)
-# 
-# tail(wind_df)
-# 
-# ggplot(data = wind_df, aes(x = Band_1)) +
-#   geom_histogram() +
-#   theme_minimal()
+wind_df <- terra::as.data.frame(wind, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
+
+head(wind_df)
+
+tail(wind_df)
+
+ggplot(data = wind_df, aes(x = Band_1)) +
+  geom_histogram() +
+  theme_minimal()
+
+###################################################
+
+wind_raw_df <- terra::as.data.frame(wind_raw, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
+
+head(wind_raw_df)
+
+tail(wind_raw_df)
+
+ggplot(data = wind_raw_df, aes(x = Band_1)) +
+  geom_histogram() +
+  theme_minimal()
+
 ```
 
 ### Aquaculture 
 
 ```{r}
-aqua <- terra::rast(here("data", "tiff", "aqua_sfunc_v2.tif"))
+aqua <- terra::rast(here("data", "tiff", "aqua_sfunc_v2.tif")) #???????
+aqua_raw <- terra::rast(here("data", "tiff", "aqua_notransform.tif"))
 
 terra::plot(aqua, main = "Aquaculture Production (S-transformation)")
+terra::plot(aqua_raw, main = "Aquaculture Production (no transformation)")
 ```
 
 ```{r}
@@ -207,16 +236,29 @@ tail(aqua_df)
 ggplot(data = aqua_df, aes(x = Band_1)) +
   geom_histogram() +
   theme_minimal()
+
+###################################################
+aqua_raw_df <- terra::as.data.frame(aqua_raw, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
+
+head(aqua_raw_df)
+
+tail(aqua_raw_df)
+
+ggplot(data = aqua_raw_df, aes(x = aqua_notransform)) +
+  geom_histogram() +
+  theme_minimal()
 ```
 
 ### Fisheries
-
+SOMETHNG IS STILL WRONG HERE.
+I think maybe there might be an issue with the pre-transformation raster still. Transformed data has 1,640,319 observations and pre-transformation only has 15,541, which is weird.
 ```{r}
-############### ALSO NEED TO FIX THIS ##########
-## Lat and longs not available ##
-fishy <- terra::rast(here("data", "tiff", "catchdata_output_updated_.tif"))
+
+fishy <- terra::rast(here("data", "tiff", "catchdata_outp_ProjectRas.tif"))
+fishy_raw <- terra::rast(here("data", "tiff", "catchdata_notransform.tif"))
 
 terra::plot(fishy, main = "Fisheries Production (Z-transformation)")
+terra::plot(fishy_raw, main = "Fisheries Production (no transformation)")
 ```
 
 ```{r}
@@ -226,7 +268,19 @@ head(fishy_df)
 
 tail(fishy_df)
 
-ggplot(data = fishy_df, aes(x = catchdata_output_updated_)) +
+ggplot(data = fishy_df, aes(x = catchdata_outp_ProjectRas)) +
   geom_histogram() +
   theme_minimal()
+
+###################################################
+fishy_raw_df <- terra::as.data.frame(fishy_raw, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
+
+head(fishy_raw_df)
+
+tail(fishy_raw_df)
+
+ggplot(data = fishy_raw_df, aes(x = catchdata_notransform)) +
+  geom_histogram() +
+  theme_minimal()
+ # xlim(c(-1, 500000))
 ```
