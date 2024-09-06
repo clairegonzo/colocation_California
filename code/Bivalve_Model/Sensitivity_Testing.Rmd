@@ -185,7 +185,7 @@ graph_wa <- ggplot(data = wave_df, aes(x = , y =)) +
 
 Merging the pre-transformed and transformed data frames
 
-```{r}
+```{r, eval=FALSE}
 ####### YIKES THIS DOESNT WORK ################
 # wave_all <- merge(wave_raw_df, wave_df, by = c("x", "y"), all = FALSE)
 
@@ -276,7 +276,7 @@ ggplot(data = aqua_raw_df, aes(x = aqua_notransform)) +
 
 Merging
 
-```{r}
+```{r, eval=FALSE}
 aqua_all <- merge(aqua_raw_df, aqua_df, by = c("x", "y"), all = FALSE)
 ```
 
@@ -317,7 +317,7 @@ ggplot(data = fishy_raw_df, aes(x = catchdata_notransform)) +
  # xlim(c(-1, 500000))
 ```
 
-```{r}
+```{r, eval=FALSE}
 fishy_all <- merge(fishy_raw_df, fishy_df, by = c("x", "y"), all = FALSE)
 ```
 
@@ -335,10 +335,17 @@ head(colo_df)
 
 tail(colo_df)
 
-ggplot(data = colo_df, aes(x = Band_1)) +
+colo_hist <- ggplot(data = colo_df, aes(x = Band_1)) +
   geom_histogram() +
-  theme_minimal()
+  theme_minimal() +
+  xlab("Co-location Suitability Score") +
+  ylab("Count")
 ```
+
+```{r}
+ggsave(filename = here("figures", "colocation_histogram.jpeg"), width = 8, height = 8, units = "in")
+```
+
 
 Scatter plot showing the co-location suitability score related to latitude
 ```{r}
