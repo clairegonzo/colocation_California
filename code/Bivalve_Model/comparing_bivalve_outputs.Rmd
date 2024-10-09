@@ -36,7 +36,10 @@ combined <- base::merge(output_12, output_14, by = c("site", "long", "lat"), all
   mutate(yield_12 = yield.x,
          yield_14 = yield.y
          ) %>% 
-  dplyr::select("site", "long", "lat", "yield_12", "yield_14")
+  dplyr::select("site", "long", "lat", "yield_12", "yield_14") %>% 
+  mutate(delta = yield_14 - yield_12)
+
+# write.csv(combined, here("data", "bivalve_model","bivalvemodel_combined1214.csv"))
 
 ```
 
@@ -90,7 +93,7 @@ mean(vec14)
 sd(vec14)
 ```
 
-## Initial visualizations of model outputs
+gg## Initial visualizations of model outputs
 
 ```{r}
 
@@ -130,6 +133,8 @@ ggplot(data = combined_long, aes(x = year, y = yield, fill = year)) +
       plot.title = element_text(size=11)
     ) +
   theme_minimal()
+
+# ggsave(filename = here("figures", "aquaculture_2014_12.jpeg"), width = 8, height = 8, units = "in")
 ```
 
 # Working with SST data and bivalve yields
