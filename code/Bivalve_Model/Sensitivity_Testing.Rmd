@@ -360,7 +360,7 @@ Scatter plot showing the co-location suitability score related to latitude
 
 ggplot(data = colo_df, aes(x = y, y = Band_1)) +
   geom_point(size = 1) +
-  geom_smooth(method="lm") +
+  # geom_smooth(method="lm") +
   theme_minimal() +
   xlab("Latitude") +
   ylab("Co-location Suitability Score")
@@ -370,7 +370,8 @@ ggplot(data = colo_df, aes(x = y, y = Band_1)) +
 
 ggplot(data = colo_df, aes(x = x, y = Band_1)) +
   geom_point(size = 1) +
-  geom_smooth(method="lm") +
+  # geom_smooth(method="lm") +
+  geom_line(data = long_lm2, aes( y = y)) +
   theme_minimal() +
   xlab("Longitude") +
   ylab("Co-location Suitability Score")
@@ -381,14 +382,15 @@ ggplot(data = colo_df, aes(x = x, y = Band_1)) +
 Linear models to correspond each graph above
 ```{r}
 long_lm <- lm(Band_1 ~ y, data = colo_df)
+long_lm2 <- glm(Band_1 ~ y, family = Gamma(link = "log"), data = colo_df)
 
 lat_lm <- lm(Band_1 ~ x, data = colo_df)
 
-# library(broom)
+library(broom)
 # broom::tidy(long_lm)
 # broom::tidy(lat_lm)
-# glance(long_lm)
-# glance(lat_lm)
+glance(long_lm)
+glance(lat_lm)
 
 summary(long_lm)
 summary(lat_lm)
@@ -398,6 +400,15 @@ summary(lat_lm)
 Latitude seems to have the better correlation and higher R value
 ```{r}
 plot(lat_lm)
+
+```
+
+## Break point
+```{r}
+library(nlme)
+library(ciTools)
+
+model_long <- predict.glm(best.mod)
 
 ```
 
