@@ -354,6 +354,32 @@ colo_hist <- ggplot(data = colo_df, aes(x = Band_1)) +
 ```
 
 
+Linear models to correspond each graph above
+```{r}
+long_lm <- lm(Band_1 ~ y, data = colo_df)
+#long_lm2 <- glm(Band_1 ~ y, family = Gamma(link = "log"), data = colo_df)
+#######GOTTA SUBSET FIRST TO be just beginning part and then end part. Create 4 individual models and then add each of those models to the figure below######################
+
+lat_lm <- lm(Band_1 ~ x, data = colo_df)
+
+library(broom)
+# broom::tidy(long_lm)
+# broom::tidy(lat_lm)
+glance(long_lm)
+glance(lat_lm)
+
+summary(long_lm)
+summary(lat_lm)
+
+```
+
+Latitude seems to have the better correlation and higher R value
+```{r}
+plot(lat_lm)
+
+```
+
+
 Scatter plot showing the co-location suitability score related to latitude
 ```{r}
 # library(hrbrthemes) #having issues downloading some of these dependencies
@@ -379,32 +405,8 @@ ggplot(data = colo_df, aes(x = x, y = Band_1)) +
 # ggsave(filename = here("figures", "colocation_longitude.jpeg"), width = 8, height = 8, units = "in")
 ```
 
-Linear models to correspond each graph above
-```{r}
-long_lm <- lm(Band_1 ~ y, data = colo_df)
-long_lm2 <- glm(Band_1 ~ y, family = Gamma(link = "log"), data = colo_df)
-
-lat_lm <- lm(Band_1 ~ x, data = colo_df)
-
-library(broom)
-# broom::tidy(long_lm)
-# broom::tidy(lat_lm)
-glance(long_lm)
-glance(lat_lm)
-
-summary(long_lm)
-summary(lat_lm)
-
-```
-
-Latitude seems to have the better correlation and higher R value
-```{r}
-plot(lat_lm)
-
-```
-
 ## Break point
-```{r}
+```{r, eval=FALSE}
 library(nlme)
 library(ciTools)
 
