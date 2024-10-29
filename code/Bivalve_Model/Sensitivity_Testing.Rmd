@@ -353,12 +353,17 @@ colo_hist <- ggplot(data = colo_df, aes(x = Band_1)) +
 # ggsave(filename = here("figures", "colocation_histogram.jpeg"), width = 8, height = 8, units = "in")
 ```
 
+Subsetting the plots so that its just the first half and the second half
+```{r}
+
+```
+
 
 Linear models to correspond each graph above
 ```{r}
 long_lm <- lm(Band_1 ~ y, data = colo_df)
 #long_lm2 <- glm(Band_1 ~ y, family = Gamma(link = "log"), data = colo_df)
-#######GOTTA SUBSET FIRST TO be just beginning part and then end part. Create 4 individual models and then add each of those models to the figure below######################
+#summary(long_lm2)
 
 lat_lm <- lm(Band_1 ~ x, data = colo_df)
 
@@ -374,11 +379,101 @@ summary(lat_lm)
 ```
 
 Latitude seems to have the better correlation and higher R value
-```{r}
+```{r, eval=FALSE}
+plot(long_lm)
+#plot(long_lm2)
+
 plot(lat_lm)
 
 ```
 
+**We checked our model as a lm and a glm. After looking at residuals, the lm was a better fit**
+
+## Break point
+Analysis for longitude first
+```{r}
+library(nlme)
+# library(ciTools)
+library(segmented)
+
+davies.test(long_lm)
+
+# 	Davies test for a change in the slope
+# 
+# data:  formula = Band_1 ~ y ,   method = lm 
+# model = gaussian , link = identity  
+# segmented variable = y
+# 'best' at = 34.503, n.points = 8, p-value < 2.2e-16
+# alternative hypothesis: two.sided
+
+segmented(long_lm)
+
+# Call: segmented.lm(obj = long_lm)
+# 
+# Coefficients of the linear terms:
+# (Intercept)            y         U1.y  
+#    -1.42272      0.05802     -0.03502  
+# 
+# Estimated Break-Point(s):
+# psi1.y  
+ # 34.83 
+
+seg_long <- segmented(long_lm, seg.Z = ~ y, npsi = 1, control = seg.control(display = FALSE))
+
+#################################################
+
+xp_long <- c(min(colo_df$y), seg_long$psi[, "Est."], max(colo_df$y))
+yp_long <- predict(seg_long, newdata = data.frame(x = xp_long), se.fit = TRUE) # this doesn't work????
+
+
+```
+
+Same analysis for lats
+```{r}
+davies.test(lat_lm)
+
+# 	Davies test for a change in the slope
+# 
+# data:  formula = Band_1 ~ x ,   method = lm 
+# model = gaussian , link = identity  
+# segmented variable = x
+# 'best' at = -119.97, n.points = 8, p-value < 2.2e-16
+# alternative hypothesis: two.sided
+
+segmented(lat_lm)
+
+# Call: segmented.lm(obj = lat_lm)
+# 
+# Coefficients of the linear terms:
+# (Intercept)            x         U1.x  
+#    -1.88877     -0.02091     -0.14537  
+# 
+# Estimated Break-Point(s):
+# psi1.x  
+# -120.3 
+
+seg_lat <- segmented(lat_lm, seg.Z = ~ y, npsi = 1, control = seg.control(display = FALSE))
+
+#################################################
+
+xp_lat <- c(min(colo_df$x), seg_lat$psi[, "Est."], max(colo_df$x))
+```
+
+
+
+Holding for later in case the break point analysis doesn't work: Predict values of the lms so that we can plot them as a line
+```{r, eval=FALSE}
+long.predict <- cbind(colo_df, predict(long_lm, interval = 'confidence'))
+
+ggplot(data = long.predict, aes(x = x, y = Band_1)) +
+  geom_point() +
+  geom_line(aes(x = x, y = fit), color = "gray") +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.1) +
+  theme_minimal()
+
+```
+
+### Visualizations
 
 Scatter plot showing the co-location suitability score related to latitude
 ```{r}
@@ -397,7 +492,9 @@ ggplot(data = colo_df, aes(x = y, y = Band_1)) +
 ggplot(data = colo_df, aes(x = x, y = Band_1)) +
   geom_point(size = 1) +
   # geom_smooth(method="lm") +
-  geom_line(data = long_lm2, aes( y = y)) +
+  # geom_line(data = long_lm, aes(x = x, y = y), color="gray") +
+  geom_line(data = long.predict, aes(y = fit), color = "gray") +
+  #geom_ribbon(data = long.predict, aes(ymin = lwr, ymax = upr), alpha = 0.1) +
   theme_minimal() +
   xlab("Longitude") +
   ylab("Co-location Suitability Score")
@@ -405,17 +502,8 @@ ggplot(data = colo_df, aes(x = x, y = Band_1)) +
 # ggsave(filename = here("figures", "colocation_longitude.jpeg"), width = 8, height = 8, units = "in")
 ```
 
-## Break point
-```{r, eval=FALSE}
-library(nlme)
-library(ciTools)
-
-model_long <- predict.glm(best.mod)
-
-```
 
 
-### Visualizations
 ```{r}
 # wave_graph <- ggplot(data = wave_all, aes(x = Band_1, y = wave_notransform)) +
 #   geom_point() +
