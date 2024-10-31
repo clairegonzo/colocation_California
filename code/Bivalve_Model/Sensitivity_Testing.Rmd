@@ -361,11 +361,11 @@ Subsetting the plots so that its just the first half and the second half
 
 Linear models to correspond each graph above
 ```{r}
-long_lm <- lm(Band_1 ~ y, data = colo_df)
+long_lm <- lm(Band_1 ~ x, data = colo_df)
 #long_lm2 <- glm(Band_1 ~ y, family = Gamma(link = "log"), data = colo_df)
 #summary(long_lm2)
 
-lat_lm <- lm(Band_1 ~ x, data = colo_df)
+lat_lm <- lm(Band_1 ~ y, data = colo_df)
 
 library(broom)
 # broom::tidy(long_lm)
@@ -400,10 +400,10 @@ davies.test(long_lm)
 
 # 	Davies test for a change in the slope
 # 
-# data:  formula = Band_1 ~ y ,   method = lm 
+# data:  formula = Band_1 ~ x ,   method = lm 
 # model = gaussian , link = identity  
-# segmented variable = y
-# 'best' at = 34.503, n.points = 8, p-value < 2.2e-16
+# segmented variable = x
+# 'best' at = -119.97, n.points = 8, p-value < 2.2e-16
 # alternative hypothesis: two.sided
 
 segmented(long_lm)
@@ -411,19 +411,18 @@ segmented(long_lm)
 # Call: segmented.lm(obj = long_lm)
 # 
 # Coefficients of the linear terms:
-# (Intercept)            y         U1.y  
-#    -1.42272      0.05802     -0.03502  
+# (Intercept)            x         U1.x  
+#    -1.88877     -0.02091     -0.14537  
 # 
 # Estimated Break-Point(s):
-# psi1.y  
- # 34.83 
+# psi1.x  
+# -120.3  
 
-seg_long <- segmented(long_lm, seg.Z = ~ y, npsi = 1, control = seg.control(display = FALSE))
+seg_long <- segmented(long_lm, seg.Z = ~ x, npsi = 1, control = seg.control(display = FALSE))
 
-#################################################
+plot.segmented(seg_long, res=TRUE, col=2, conf.level=.95)
+## Try to clean this up and add new axis titles ##
 
-xp_long <- c(min(colo_df$y), seg_long$psi[, "Est."], max(colo_df$y))
-yp_long <- predict(seg_long, newdata = data.frame(x = xp_long), se.fit = TRUE) # this doesn't work????
 
 
 ```
@@ -434,10 +433,10 @@ davies.test(lat_lm)
 
 # 	Davies test for a change in the slope
 # 
-# data:  formula = Band_1 ~ x ,   method = lm 
+# data:  formula = Band_1 ~ y ,   method = lm 
 # model = gaussian , link = identity  
-# segmented variable = x
-# 'best' at = -119.97, n.points = 8, p-value < 2.2e-16
+# segmented variable = y
+# 'best' at = 34.503, n.points = 8, p-value < 2.2e-16
 # alternative hypothesis: two.sided
 
 segmented(lat_lm)
@@ -445,18 +444,15 @@ segmented(lat_lm)
 # Call: segmented.lm(obj = lat_lm)
 # 
 # Coefficients of the linear terms:
-# (Intercept)            x         U1.x  
-#    -1.88877     -0.02091     -0.14537  
+# (Intercept)            y         U1.y  
+#    -1.42272      0.05802     -0.03502  
 # 
 # Estimated Break-Point(s):
-# psi1.x  
-# -120.3 
+# psi1.y  
+#  34.83   
 
 seg_lat <- segmented(lat_lm, seg.Z = ~ y, npsi = 1, control = seg.control(display = FALSE))
-
-#################################################
-
-xp_lat <- c(min(colo_df$x), seg_lat$psi[, "Est."], max(colo_df$x))
+plot.segmented(seg_lat, res=TRUE, col=2, conf.level=.95)
 ```
 
 
@@ -481,6 +477,7 @@ Scatter plot showing the co-location suitability score related to latitude
 
 ggplot(data = colo_df, aes(x = y, y = Band_1)) +
   geom_point(size = 1) +
+  geom_vline(xintercept = 34.503, color = "red", linetype="longdash") +
   # geom_smooth(method="lm") +
   theme_minimal() +
   xlab("Latitude") +
@@ -491,9 +488,10 @@ ggplot(data = colo_df, aes(x = y, y = Band_1)) +
 
 ggplot(data = colo_df, aes(x = x, y = Band_1)) +
   geom_point(size = 1) +
+  geom_vline(xintercept = -119.97, color = "red", linetype="longdash") +
   # geom_smooth(method="lm") +
   # geom_line(data = long_lm, aes(x = x, y = y), color="gray") +
-  geom_line(data = long.predict, aes(y = fit), color = "gray") +
+ # geom_line(data = long.predict, aes(y = fit), color = "gray") +
   #geom_ribbon(data = long.predict, aes(ymin = lwr, ymax = upr), alpha = 0.1) +
   theme_minimal() +
   xlab("Longitude") +
