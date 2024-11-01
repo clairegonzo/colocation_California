@@ -420,10 +420,7 @@ segmented(long_lm)
 
 seg_long <- segmented(long_lm, seg.Z = ~ x, npsi = 1, control = seg.control(display = FALSE))
 
-plot.segmented(seg_long, res=TRUE, col=2, conf.level=.95)
-## Try to clean this up and add new axis titles ##
-
-
+plot.segmented(seg_long, res=TRUE, col=2, conf.level=.95) #exported manually as a jpeg from the bottom right pane
 
 ```
 
@@ -452,41 +449,36 @@ segmented(lat_lm)
 #  34.83   
 
 seg_lat <- segmented(lat_lm, seg.Z = ~ y, npsi = 1, control = seg.control(display = FALSE))
-plot.segmented(seg_lat, res=TRUE, col=2, conf.level=.95)
-```
-
-
-
-Holding for later in case the break point analysis doesn't work: Predict values of the lms so that we can plot them as a line
-```{r, eval=FALSE}
-long.predict <- cbind(colo_df, predict(long_lm, interval = 'confidence'))
-
-ggplot(data = long.predict, aes(x = x, y = Band_1)) +
-  geom_point() +
-  geom_line(aes(x = x, y = fit), color = "gray") +
-  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.1) +
-  theme_minimal()
+plot.segmented(seg_lat, res=TRUE, col=2, conf.level=.95) #exported manually as a jpeg from the bottom right pane
 
 ```
+
+
+
 
 ### Visualizations
 
 Scatter plot showing the co-location suitability score related to latitude
 ```{r}
 # library(hrbrthemes) #having issues downloading some of these dependencies
+library(cowplot)
 
-ggplot(data = colo_df, aes(x = y, y = Band_1)) +
+p1 <- 
+  ggplot(data = colo_df, aes(x = y, y = Band_1)) +
   geom_point(size = 1) +
   geom_vline(xintercept = 34.503, color = "red", linetype="longdash") +
   # geom_smooth(method="lm") +
   theme_minimal() +
   xlab("Latitude") +
-  ylab("Co-location Suitability Score")
+  ylab("Co-location Suitability Score") +
+  theme(axis.title = element_text(size = 15),
+        axis.text = element_text(size = 12))
 
-# ggsave(filename = here("figures", "colocation_latitude.jpeg"), width = 8, height = 8, units = "in")
+# ggsave(filename = here("figures", "colocation_latitude.jpeg"), width = 10, height = 10, units = "in")
 ############################################################################
 
-ggplot(data = colo_df, aes(x = x, y = Band_1)) +
+p2 <- 
+  ggplot(data = colo_df, aes(x = x, y = Band_1)) +
   geom_point(size = 1) +
   geom_vline(xintercept = -119.97, color = "red", linetype="longdash") +
   # geom_smooth(method="lm") +
@@ -495,9 +487,15 @@ ggplot(data = colo_df, aes(x = x, y = Band_1)) +
   #geom_ribbon(data = long.predict, aes(ymin = lwr, ymax = upr), alpha = 0.1) +
   theme_minimal() +
   xlab("Longitude") +
-  ylab("Co-location Suitability Score")
+  ylab("Co-location Suitability Score") +
+  theme(axis.title = element_text(size = 15),
+        axis.text = element_text(size = 12))
 
-# ggsave(filename = here("figures", "colocation_longitude.jpeg"), width = 8, height = 8, units = "in")
+# ggsave(filename = here("figures", "colocation_longitude.jpeg"), width = 10, height = 10, units = "in")
+
+plot_grid(p1, p2, labels = c('A', 'B'), label_size = 16)
+
+ggsave(filename = here("figures", "colocation_bothlonglat.jpeg"), width = 11, height = 5.5, units = "in")
 ```
 
 
