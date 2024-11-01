@@ -495,7 +495,7 @@ p2 <-
 
 plot_grid(p1, p2, labels = c('A', 'B'), label_size = 16)
 
-ggsave(filename = here("figures", "colocation_bothlonglat.jpeg"), width = 11, height = 5.5, units = "in")
+# ggsave(filename = here("figures", "colocation_bothlonglat.jpeg"), width = 11, height = 5.5, units = "in")
 ```
 
 
