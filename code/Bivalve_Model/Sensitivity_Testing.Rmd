@@ -330,7 +330,12 @@ fishy_all <- merge(fishy_raw_df, fishy_df, by = c("x", "y"), all = FALSE)
 
 ### Co-location Suitability Model
 ```{r}
-colo <- terra::rast(here("data", "tiff", "CellSta_colocation_off.tif"))
+# colo <- terra::rast(here("data", "tiff", "CellSta_colocation_off.tif"))
+# 
+# terra::plot(colo, main = "Co-location Suitability Score")
+
+## redoing this code chunk with the nearshore model on 2/17/2025
+colo <- terra::rast(here("data", "tiff", "Colo_allnear_masked_1.tif"))
 
 terra::plot(colo, main = "Co-location Suitability Score")
 ```
@@ -342,7 +347,13 @@ head(colo_df)
 
 tail(colo_df)
 
-colo_hist <- ggplot(data = colo_df, aes(x = Band_1)) +
+# colo_hist <- ggplot(data = colo_df, aes(x = Band_1)) +
+#   geom_histogram() +
+#   theme_minimal() +
+#   xlab("Co-location Suitability Score") +
+#   ylab("Count")
+
+colo_hist <- ggplot(data = colo_df, aes(x = Colo_allnear_masked_1)) +
   geom_histogram() +
   theme_minimal() +
   xlab("Co-location Suitability Score") +
@@ -361,11 +372,19 @@ Subsetting the plots so that its just the first half and the second half
 
 Linear models to correspond each graph above
 ```{r}
-long_lm <- lm(Band_1 ~ x, data = colo_df)
-#long_lm2 <- glm(Band_1 ~ y, family = Gamma(link = "log"), data = colo_df)
-#summary(long_lm2)
+# following is code for the full offshore model (not the 200m deep)
+#long_lm <- lm(Band_1 ~ x, data = colo_df)
 
-lat_lm <- lm(Band_1 ~ y, data = colo_df)
+#following is code for the full offshore model (not the 200m deep)
+#lat_lm <- lm(Band_1 ~ y, data = colo_df)
+#####################
+
+# long_lm2 <- glm(Colo_allnear_masked_1 ~ y, family = Gamma(link = "log"), data = colo_df)
+# summary(long_lm2)
+
+long_lm <- lm(Colo_allnear_masked_1 ~ x, data = colo_df)
+lat_lm <- lm(Colo_allnear_masked_1 ~ y, data = colo_df)
+
 
 library(broom)
 # broom::tidy(long_lm)
@@ -375,6 +394,9 @@ glance(lat_lm)
 
 summary(long_lm)
 summary(lat_lm)
+
+confint(lat_lm, 'y', level = 0.95)
+confint(long_lm, 'x', level = 0.95)
 
 ```
 
@@ -400,10 +422,10 @@ davies.test(long_lm)
 
 # 	Davies test for a change in the slope
 # 
-# data:  formula = Band_1 ~ x ,   method = lm 
+# data:  formula = Colo_allnear_masked_1 ~ x ,   method = lm 
 # model = gaussian , link = identity  
 # segmented variable = x
-# 'best' at = -119.97, n.points = 8, p-value < 2.2e-16
+# 'best' at = -121.28, n.points = 9, p-value < 2.2e-16
 # alternative hypothesis: two.sided
 
 segmented(long_lm)
@@ -412,13 +434,20 @@ segmented(long_lm)
 # 
 # Coefficients of the linear terms:
 # (Intercept)            x         U1.x  
-#    -1.88877     -0.02091     -0.14537  
+#    -4.40642     -0.04037     -0.05942  
 # 
 # Estimated Break-Point(s):
 # psi1.x  
-# -120.3  
+# -120.8 
 
 seg_long <- segmented(long_lm, seg.Z = ~ x, npsi = 1, control = seg.control(display = FALSE))
+
+slope(seg_long)
+# $x
+#             Est.   St.Err. t value CI(95%).l CI(95%).u
+# slope1 -0.040365 0.0024561 -16.435 -0.045182 -0.035548
+# slope2 -0.099785 0.0033465 -29.817 -0.106350 -0.093221
+
 
 plot.segmented(seg_long, res=TRUE, col=2, conf.level=.95) #exported manually as a jpeg from the bottom right pane
 
@@ -430,11 +459,12 @@ davies.test(lat_lm)
 
 # 	Davies test for a change in the slope
 # 
-# data:  formula = Band_1 ~ y ,   method = lm 
+# data:  formula = Colo_allnear_masked_1 ~ y ,   method = lm 
 # model = gaussian , link = identity  
 # segmented variable = y
-# 'best' at = 34.503, n.points = 8, p-value < 2.2e-16
+# 'best' at = 38.819, n.points = 8, p-value < 2.2e-16
 # alternative hypothesis: two.sided
+
 
 segmented(lat_lm)
 
@@ -442,13 +472,19 @@ segmented(lat_lm)
 # 
 # Coefficients of the linear terms:
 # (Intercept)            y         U1.y  
-#    -1.42272      0.05802     -0.03502  
+#    -1.59491      0.05709     -0.06438  
 # 
 # Estimated Break-Point(s):
 # psi1.y  
-#  34.83   
+#  38.67    
 
 seg_lat <- segmented(lat_lm, seg.Z = ~ y, npsi = 1, control = seg.control(display = FALSE))
+slope(seg_lat)
+# $y
+#              Est.   St.Err. t value CI(95%).l CI(95%).u
+# slope1  0.0570930 0.0013786 41.4140  0.054389 0.0597960
+# slope2 -0.0072921 0.0045598 -1.5992 -0.016235 0.0016508
+
 plot.segmented(seg_lat, res=TRUE, col=2, conf.level=.95) #exported manually as a jpeg from the bottom right pane
 
 ```
@@ -464,10 +500,13 @@ Scatter plot showing the co-location suitability score related to latitude
 library(cowplot)
 
 p1 <- 
-  ggplot(data = colo_df, aes(x = y, y = Band_1)) +
+  ggplot(data = colo_df, aes(x = y, y = 
+                               Colo_allnear_masked_1)) +
+                               #Band_1)) +
   geom_point(size = 1) +
-  geom_vline(xintercept = 34.503, color = "red", linetype="longdash") +
-  # geom_smooth(method="lm") +
+  #geom_vline(xintercept = 38.819, color = "red", linetype="longdash") +
+  # stat_smooth(method = "lm") +
+  geom_smooth(method="lm", color = "red") +
   theme_minimal() +
   xlab("Latitude") +
   ylab("Co-location Suitability Score") +
@@ -478,10 +517,12 @@ p1 <-
 ############################################################################
 
 p2 <- 
-  ggplot(data = colo_df, aes(x = x, y = Band_1)) +
+  ggplot(data = colo_df, aes(x = x, y = 
+                               Colo_allnear_masked_1)) +
+                               #Band_1)) +
   geom_point(size = 1) +
-  geom_vline(xintercept = -119.97, color = "red", linetype="longdash") +
-  # geom_smooth(method="lm") +
+  # geom_vline(xintercept = -121.28, color = "red", linetype="longdash") +
+  geom_smooth(method="lm", color = "red") +
   # geom_line(data = long_lm, aes(x = x, y = y), color="gray") +
  # geom_line(data = long.predict, aes(y = fit), color = "gray") +
   #geom_ribbon(data = long.predict, aes(ymin = lwr, ymax = upr), alpha = 0.1) +
@@ -495,7 +536,7 @@ p2 <-
 
 plot_grid(p1, p2, labels = c('A', 'B'), label_size = 16)
 
-# ggsave(filename = here("figures", "colocation_bothlonglat.jpeg"), width = 11, height = 5.5, units = "in")
+# ggsave(filename = here("figures", "colocation_bothlonglat_onlylm.jpeg"), width = 11, height = 5.5, units = "in")
 ```
 
 
