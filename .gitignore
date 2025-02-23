@@ -2,18 +2,22 @@
 .Rhistory
 .RData
 .Ruserdata
+**/.DS_Store
 .DS_Store
-
 
 # Ignore the wave output data (too large)
 data/wave_output/randompoints_watts
-
 #Ignore wave data input coordinates (too large/clunky)
 random_points_Albers
-
 # Ignore exported csvs (too large) These are being put on chap 2 google drive
 data/wave_output
+#Ignore tif ad jpeg files because they are too big
+data/tiff
+/figures
 
 # Ignore all csv files and nc files
 *.csv
 *.nc
+*.jpg
+*.jpeg
+**/*.jpeg
