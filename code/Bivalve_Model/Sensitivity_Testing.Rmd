@@ -364,10 +364,55 @@ colo_hist <- ggplot(data = colo_df, aes(x = Colo_allnear_masked_1)) +
 # ggsave(filename = here("figures", "colocation_histogram.jpeg"), width = 8, height = 8, units = "in")
 ```
 
-Subsetting the plots so that its just the first half and the second half
+Subsetting the plots: North versus South
 ```{r}
+colo_north <- terra::rast(here("data", "tiff", "Colo_near_NoCA.tif"))
+colo_south <- terra::rast(here("data", "tiff", "Colo_near_SoCA.tif"))
 
+terra::plot(colo_north, main = "Northern CA Co-location Suitability Score")
+terra::plot(colo_south, main = "Southern CA Co-location Suitability Score")
 ```
+
+Convert to dataframes
+```{r}
+colo_north_df <- terra::as.data.frame(colo_north, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
+head(colo_north_df)
+tail(colo_north_df)
+
+colo_south_df <- terra::as.data.frame(colo_south, row.names = NULL, optional = NULL, xy = TRUE, cells=FALSE, time=FALSE, na.rm=TRUE, wide=TRUE)
+head(colo_south_df)
+tail(colo_south_df)
+```
+
+Wrangle data for testing
+```{r}
+region <- c(rep("North", 1136))
+colo_north_wide <- cbind(colo_north_df, region) %>% #IDing these values as being North
+  rename(value = Colo_near_NoCA)
+
+region <- c(rep("South", 695))
+colo_south_wide <- cbind(colo_south_df, region) %>% #IDing these values as being South
+  rename(value = Colo_near_SoCA)
+
+#now r binding these dfs so that all the data is in the same dataframe (but delineates between North and South values)
+colo_combo <- rbind(colo_north_wide, colo_south_wide)
+# %>% 
+  # group_by(region) %>% 
+  # summarize(count = n(),
+  #           median = median(value, na.rm = TRUE))
+
+# Mann Whitney U Test
+mann_test <- wilcox.test(value ~ region, data = colo_combo, paired = FALSE, exact = FALSE)
+mann_test
+
+# Wilcoxon rank sum test with continuity correction
+# 
+# data:  value by region
+# W = 708355, p-value < 2.2e-16
+# alternative hypothesis: true location shift is not equal to 0
+```
+
+
 
 
 Linear models to correspond each graph above
