@@ -2,7 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
-**/.DS_Store
+**.DS_Store
+
 .DS_Store
 
 # Ignore the wave output data (too large)
@@ -13,11 +14,9 @@ random_points_Albers
 data/wave_output
 #Ignore tif ad jpeg files because they are too big
 data/tiff
-/figures
 
 # Ignore all csv files and nc files
 *.csv
 *.nc
 *.jpg
 *.jpeg
-**/*.jpeg
