@@ -20,6 +20,7 @@ library(tidyverse)
 library(here)
 library(stats)
 library(ggplot2)
+library(dplyr)
 ```
 
 ## Read and wrangle in data
@@ -93,7 +94,35 @@ mean(vec14)
 sd(vec14)
 ```
 
-gg## Initial visualizations of model outputs
+Calculating CIs
+```{r}
+
+vec12_ci <- combined_nocopies %>% 
+  select(site, yield_12) %>%
+  summarize(
+    mean = mean(yield_12),
+    sd = sd(yield_12),
+    n = n(),
+    lower = (mean - qt(0.975, df= n-1) * (sd/sqrt(n))),
+    upper = (mean + qt(0.975, df= n-1) * (sd/sqrt(n)))
+  )
+
+# ggplot(data = combined_nocopies, aes(x = yield_12)) +
+#   geom_density(fill="#69b3a2", color="#e9ecef", alpha=0.8) +
+#   geom_vline(xintercept = 5940216.48) +
+#   geom_vline(xintercept = 6030918.26)
+
+#coefficient of variation
+cv_12 <- sd(vec12)/mean(vec12)
+cv_12
+
+cv_14 <- sd(vec14)/mean(vec14)
+cv_14
+
+```
+
+
+## Initial visualizations of model outputs
 
 ```{r}
 
