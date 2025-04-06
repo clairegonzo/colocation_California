@@ -375,3 +375,23 @@ ggplot(data = all_poc_sst_yield, aes(x = sst_ave, y = poc_ave)) +
 
 ```
 
+## Mld summary
+```{r}
+mld <- read.csv(here("data", "mld_2016.csv"), header = TRUE)
+```
+
+```{r}
+mld_long <- mld %>% 
+  pivot_longer(
+    cols = starts_with("month_"),
+    names_to = "month",
+    values_to = "mld"
+  )
+
+summary <- mld_long %>% 
+  summarise(
+    mean = mean(mld),
+    sd = sd(mld)
+  )
+```
+
