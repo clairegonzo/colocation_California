@@ -52,16 +52,23 @@ s3 <- output_s3 %>%
 
 Merging the 3 frames. Format will be wide so then we will make it longer.
 ```{r}
-wide1 <- merge(output_main, s1, by = c("site", "long", "lat"), all = TRUE)
+wide1 <- merge(output_main, s1, by = c("site", "long", "lat"), all = TRUE) %>% 
+  mutate("Test 1" = s1_yield) %>% 
+  select(-s1_yield)
 
-wide2 <- merge(s2, s3, by = c("site", "long", "lat"), all = TRUE)
+wide2 <- merge(s2, s3, by = c("site", "long", "lat"), all = TRUE) %>% 
+  mutate("Test 2" = s2_yield,
+        "Test 3" = s3_yield) %>% 
+  select(-c(s2_yield, s3_yield))
 
-wide <- merge(wide1, wide2, by = c("site", "long", "lat"), all = TRUE)
+wide <- merge(wide1, wide2, by = c("site", "long", "lat"), all = TRUE) %>% 
+  mutate(Output = yield) %>% 
+  select(-yield)
 ```
 
 ```{r}
 alldata <- wide %>% 
-  pivot_longer(yield:s3_yield,
+  pivot_longer(`Test 1`:Output,
                names_to = "test",
                values_to = "yield")
 ```
@@ -80,7 +87,7 @@ ggplot(data = alldata, aes(x = test, y = yield, fill = test)) +
   theme_minimal()
 
 ggplot(data = alldata, aes(x = test, y = yield, fill = test)) +
-  geom_violin() +
+  geom_violin(fill= 'gray') +
   #geom_jitter(color="black", size=0.4, alpha=0.9) +
   # theme(
   #     legend.position="none",
@@ -93,7 +100,7 @@ ggplot(data = alldata, aes(x = test, y = yield, fill = test)) +
   theme(legend.position = "none")
 
 
-#ggsave(filename = here("figures", "aquaculture_sensitivity.jpeg"), width = 10, height = 8, units = "in")
+# ggsave(filename = here("figures", "aquaculture_sensitivity.jpeg"), width = 10, height = 8, units = "in")
 ```
 
 ## Percent change
