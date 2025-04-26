@@ -296,8 +296,6 @@ aqua_all <- merge(aqua_raw_df, aqua_df, by = c("x", "y"), all = FALSE)
 
 
 ### Fisheries
-SOMETHNG IS STILL WRONG HERE.
-I think maybe there might be an issue with the pre-transformation raster still. Transformed data has 1,640,319 observations and pre-transformation only has 15,541, which is weird.
 ```{r}
 
 fishy <- terra::rast(here("data", "tiff", "catchdata_outp_ProjectRas.tif"))
