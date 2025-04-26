@@ -34,11 +34,11 @@ Merging outputs of 2012 and 2014 outputs
 
 ```{r}
 combined <- base::merge(output_12, output_14, by = c("site", "long", "lat"), all = TRUE) %>% 
-  mutate(yield_12 = yield.x,
-         yield_14 = yield.y
+  mutate(yield_2012 = yield.x,
+         yield_2014 = yield.y
          ) %>% 
-  dplyr::select("site", "long", "lat", "yield_12", "yield_14") %>% 
-  mutate(delta = yield_14 - yield_12)
+  dplyr::select("site", "long", "lat", "yield_2012", "yield_2014") %>% 
+  mutate(delta = yield_2014 - yield_2012)
 
 # write.csv(combined, here("data", "bivalve_model","bivalvemodel_combined1214.csv"))
 
@@ -52,16 +52,16 @@ Is there a signififcant difference between the (paired) yield values of the 2012
 ## converting data frames to be paired vectors## 
 
 combined_nocopies <- base::merge(output_12, output_14, by = c("site", "long", "lat"), all = FALSE) %>% 
-  mutate(yield_12 = yield.x,
-         yield_14 = yield.y
+  mutate(yield_2012 = yield.x,
+         yield_2014 = yield.y
          ) %>% 
-  dplyr::select("site", "long", "lat", "yield_12", "yield_14")
+  dplyr::select("site", "long", "lat", "yield_2012", "yield_2014")
 
 vec12 <- combined_nocopies %>% 
-  pull(yield_12)
+  pull(yield_2012)
 
 vec14 <- combined_nocopies %>% 
-  pull(yield_14)
+  pull(yield_2014)
 
 
 ```
@@ -98,10 +98,10 @@ Calculating CIs
 ```{r}
 
 vec12_ci <- combined_nocopies %>% 
-  select(site, yield_12) %>%
+  select(site, yield_2012) %>%
   summarize(
-    mean = mean(yield_12),
-    sd = sd(yield_12),
+    mean = mean(yield_2012),
+    sd = sd(yield_2012),
     n = n(),
     lower = (mean - qt(0.975, df= n-1) * (sd/sqrt(n))),
     upper = (mean + qt(0.975, df= n-1) * (sd/sqrt(n)))
@@ -127,7 +127,7 @@ cv_14
 ```{r}
 
 combined_long <- combined %>%
-  pivot_longer(yield_12:yield_14,
+  pivot_longer(yield_2012:yield_2014,
                names_to = "year",
                names_prefix = "yield_",
                values_to = "yield")
@@ -154,16 +154,19 @@ ggplot(data = combined_long, aes(x = year, y = yield, fill = year)) +
     ) +
   theme_minimal()
 
-ggplot(data = combined_long, aes(x = year, y = yield, fill = year)) +
-  geom_violin() +
-  #geom_jitter(color="black", size=0.4, alpha=0.9) +
+ggplot(data = combined_long, aes(x = year, y = yield)) +
+  geom_violin( fill = "gray") +
+  xlab("Year") +
+  ylab("Yield") +
+  theme_minimal() +
   theme(
       legend.position="none",
-      plot.title = element_text(size=11)
-    ) +
-  theme_minimal()
+      # plot.title = element_text(size=12),
+      axis.text = element_text(size=12),
+      axis.title = element_text(size=16)
+    )
 
-# ggsave(filename = here("figures", "aquaculture_2014_12.jpeg"), width = 8, height = 8, units = "in")
+# ggsave(filename = here("figures", "aquaculture2_2014_12.jpeg"), width = 8, height = 8, units = "in")
 ```
 
 # Working with SST data and bivalve yields
