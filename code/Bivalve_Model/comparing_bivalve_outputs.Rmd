@@ -45,7 +45,7 @@ combined <- base::merge(output_12, output_14, by = c("site", "long", "lat"), all
 ```
 
 ### T testing the two yield groups
-Is there a signififcant difference between the (paired) yield values of the 2012 and 2014 versions of the model?
+Is there a significant difference between the (paired) yield values of the 2012 and 2014 versions of the model?
 
 ```{r}
 
@@ -67,7 +67,8 @@ vec14 <- combined_nocopies %>%
 ```
 
 ```{r}
-## conducting t test ##
+## DONT USE THE T-TEST. USE MANN-WHITNEY BELOW ##
+##conducting t test ##
 
 t.test(x = vec14, y = vec12, paired = TRUE)
 
@@ -83,6 +84,21 @@ t.test(x = vec14, y = vec12, paired = TRUE)
 # sample estimates:
 # mean difference 
 #       -410785.9 
+
+###################
+
+## Mann-Whitney U Test #
+#This is better because the distributions are not normal
+mann_test <- wilcox.test(vec14, vec12, paired = TRUE, exact = FALSE)
+mann_test
+
+############## OUTPUT ###################
+# 	Wilcoxon signed rank test with continuity correction
+# 
+# data:  vec14 and vec12
+# V = 3210721, p-value < 2.2e-16
+# alternative hypothesis: true location shift is not equal to 0
+
 ```
 Yes, these outputs are different.
 
