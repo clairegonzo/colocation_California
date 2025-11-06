@@ -588,7 +588,7 @@ alldata <- data.frame(
 ## write csv of all data dataframe
 
 ```{r}
-write.csv(alldata, here("data", "alldata_forbivalvemodel2014.csv"))
+#write.csv(alldata, here("data", "alldata_forbivalvemodel2014.csv"))
 #remove column names after this (should've done it before writing)
 ```
 
