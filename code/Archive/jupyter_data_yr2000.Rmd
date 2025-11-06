@@ -1,0 +1,132 @@
+---
+title: "wave energy"
+author: 'By: Claire Gonzales'
+date: "2023-02-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+library(sf)
+```
+
+This is to merge the wave energy data points with block coordinates and spatialize everything
+
+```{r}
+claire_excel <- read.csv(here("randompoints_10000_TableToExcel.csv"))
+```
+
+
+## Reading in data
+
+```{r}
+# Store the dataset in an object of your own choosing as follows:
+blocks_sf <- wcfish::blocks %>%
+  drop_na(block_lat_dd, block_long_dd) 
+
+################################################################################
+# FOR ACTUAL MAPPING
+# Use the ESRI .shp file from: https://chrismfree.com/california-fisheries-data/ca-fishing-blocks/
+
+blocks_shp <- read_sf(here("data_fromChris", "CA_OR_WA_comm_fishing_blocks", "CA_OR_WA_comm_fishing_blocks.shp"))
+```
+
+```{r}
+mydata <- read.csv(here("data", "jupyter_data_2005_10_combo.csv"))
+
+metadata <- read.csv(here("data", "jupyter_metadata.csv")) %>% 
+  mutate(block_lat_dd = latitude,
+         block_long_dd = longitude)
+
+```
+
+## Merge datasets together 
+
+```{r}
+
+initial_merge <- merge(blocks_sf, mydata, by = c("block_long_dd", "block_lat_dd"))
+
+data_merged <- merge(metadata, mydata) %>% 
+  filter(year == '5yrave') %>% 
+  st_as_sf(coords = c("latitude", "longitude")) #take lat and long and convert to spatial points
+```
+
+```{r}
+st_crs(data_merged) <- 4326
+
+data_transform <- st_transform(data_merged, 4326)
+```
+
+## Visualize data sets
+```{r}
+ggplot(data = data_transform) +
+  geom_sf(aes(fill = watts)) +
+  # guides(color = guide_legend(reverse = TRUE)) +
+  theme_minimal()
+
+### I think this isn't working because they aren't correctly spatialized ###
+```
+
+## export csv of data
+```{r}
+write.csv(data_transform, here("data", "wave_output", "wave_data_output.csv"))
+```
+
+# csvs of random points
+
+Massive csvs from NREL need to be reformatted. Csvs have ~2500 coordinate sites as rows and time is a row
+
+```{r}
+data_a10 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_yr2010_a.csv"))
+data_a89 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_yr2008_09_a.csv"))
+data_b <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_b.csv"))
+data_c10 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_2010_c.csv"))
+data_c89 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_2008_09_c.csv"))
+data_d10 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_2010_d.csv"))
+data_d89 <- read.csv(here("data", "wave_output", "randompoints_watts", "jupyter_data_2008_09_d.csv"))
+
+```
+
+```{r}
+# trying to pivot the data
+
+data_a10_piv <- data_a10 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_a89_piv <- data_a89 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_b_piv <- data_b %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_c10_piv <- data_c10 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_c89_piv <- data_c89 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_d10_piv <- data_d10 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+data_d89_piv <- data_d89 %>% 
+  pivot_longer(!time_index, names_to = "site", values_to = "watts") %>% 
+  group_by(site) %>% 
+  summarize(mean_watts = mean(watts, na.rm = TRUE))
+
+```
+
