@@ -22,3 +22,4 @@ Inqueries can be directed to Claire Gonzales (clairegonzales AT ucsb.edu).
 availabe as a .py file on Zenodo)
 - Sector data is transformed to be on a scale from 0-1
 - Co-location Suitability score is evaluated by overlaying layers in ArcGIS Pro.
+  - Scoring can be viewed by downloading the ArcGIS model from Zenodo. Detailed methodology is described in the full manuscript.
