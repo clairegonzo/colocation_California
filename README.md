@@ -3,7 +3,9 @@ This is the repository of code and data for "Finding Common Ground: Assessing
 the Co-location Potential of California’s Blue Food and Clean Energy Sectors", 
 published in Ocean and Coastal Management (2025).
 
-Questions can be directed to Claire Gonzales (clairegonzales@ucsb.edu)
+This code should be used in coordination with files available on Zenodo (https://zenodo.org/records/17545767).
+
+Inqueries can be directed to Claire Gonzales (clairegonzales@ucsb.edu).
 
 ## Roadmap
 
