@@ -7,7 +7,7 @@ This code should be used in coordination with files available on Zenodo (https:/
 
 Inqueries can be directed to Claire Gonzales (clairegonzales AT ucsb.edu).
 
-## Roadmap
+## Road Map
 
 - Sector values are wrangled and processed by sector 
   - **Aquaculture** was modeled using a MATLAB file available on Zenodo. Environmental input data are required for this model, which are available as 
